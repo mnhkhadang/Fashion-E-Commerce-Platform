@@ -19,6 +19,7 @@ public class Shop {
     @Id
     @GeneratedValue (strategy = GenerationType.UUID)
     private UUID id;
+
     @Nationalized
     @Column(
             nullable = false,
@@ -26,7 +27,23 @@ public class Shop {
     )
     private String name;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id",nullable = false)
+    @Nationalized
+    @Column
+    private String description;
+
+    @Column
+    private String phone;
+
+    @Column
+    private String address;
+
+    @Column
+    private String avatar;
+
+    @Column(nullable = false)
+    private boolean active = true;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User owner;
 }

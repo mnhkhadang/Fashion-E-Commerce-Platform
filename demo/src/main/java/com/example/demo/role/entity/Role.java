@@ -23,7 +23,7 @@ public class Role {
             nullable = false, // không null
             unique = true   // duy nhất
     )
-    @Nationalized
+
     private  String role;
 
 }

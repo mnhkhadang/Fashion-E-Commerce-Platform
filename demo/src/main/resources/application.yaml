@@ -3,12 +3,7 @@ spring:
     name: web-ban-hang
 
   datasource:
-    url: jdbc:mysql://localhost:3306/WebBanHang
-      ?useSSL=false
-      &allowPublicKeyRetrieval=true
-      &serverTimezone=Asia/Ho_Chi_Minh
-      &characterEncoding=utf8
-      &useUnicode=true
+    url: jdbc:mysql://localhost:3306/WebBanHang?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=UTF-8&useUnicode=true
     username: root
     password: 123456Aa
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -16,7 +11,7 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: update   # create | update | validate | none
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
@@ -28,11 +23,20 @@ spring:
     serialization:
       write-dates-as-timestamps: false
 
+  sql:
+    init:
+      mode: always
+
 server:
   port: 9090
   error:
     include-message: always
     include-binding-errors: always
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
 
 logging:
   level:

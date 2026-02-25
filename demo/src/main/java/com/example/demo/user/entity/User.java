@@ -1,5 +1,6 @@
 package com.example.demo.user.entity;
 
+import com.example.demo.shop.entity.Shop;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,7 +19,6 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-    @Nationalized
     @Column(
             nullable = false
     )
@@ -50,4 +50,7 @@ public class User {
             // -> tránh tốn tài nguyên , trách join dư thừa
     )
     private List<UserRole> roles;
+
+    @OneToOne(mappedBy = "owner", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Shop shop;
 }
