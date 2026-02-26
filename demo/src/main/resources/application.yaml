@@ -11,12 +11,17 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: true
     properties:
       hibernate:
         format_sql: true
         use_sql_comments: true
+
+  flyway:
+    enabled: true  # ← đúng chỗ, không nằm trong jpa
+    locations: classpath:db/migration  # ← locations không phải location
+    baseline-on-migrate: false
 
   jackson:
     time-zone: Asia/Ho_Chi_Minh
@@ -25,7 +30,7 @@ spring:
 
   sql:
     init:
-      mode: always
+      mode: never  # ← đổi sang never vì dùng Flyway rồi
 
 server:
   port: 9090
@@ -40,5 +45,5 @@ server:
 
 logging:
   level:
-    org.hibernate.SQL: debug
-    org.hibernate.type.descriptor.sql.BasicBinder: trace
+    org.hibernate.SQL: off
+    org.hibernate.type.descriptor.sql.BasicBinder: off

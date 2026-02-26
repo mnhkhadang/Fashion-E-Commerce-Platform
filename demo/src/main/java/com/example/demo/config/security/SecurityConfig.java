@@ -73,15 +73,25 @@ public class SecurityConfig {
                         .requestMatchers("/api/shop/**").hasRole("SHOP")
                         .requestMatchers("/api/user/**").hasRole("USER")
 
-                        // Cart - chỉ USER
+                        // Cart
                         .requestMatchers(HttpMethod.GET, "/api/cart/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/cart/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/cart/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/cart/**").hasAnyRole("USER", "ADMIN")
-                        // Location - public
+
+                        // Location
                         .requestMatchers("/api/locations/**").permitAll()
+
                         // Shipping Address
                         .requestMatchers("/api/shipping-addresses/**").hasAnyRole("USER", "ADMIN")
+
+                        // Order
+                        .requestMatchers(HttpMethod.GET, "/api/orders/shop/**").hasRole("SHOP")
+                        .requestMatchers(HttpMethod.PUT, "/api/orders/**").hasRole("SHOP")
+                        .requestMatchers("/api/orders/**").hasAnyRole("USER", "ADMIN")
+
+                        // Payment
+                        .requestMatchers("/api/payments/**").hasAnyRole("USER", "ADMIN")
 
                         .anyRequest().authenticated()
                 )
