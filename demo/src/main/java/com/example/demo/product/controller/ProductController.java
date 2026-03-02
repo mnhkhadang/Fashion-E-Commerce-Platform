@@ -67,4 +67,16 @@ public class ProductController {
     public ResponseEntity<List<ProductResponse>> getByCategory(@RequestParam String categoryName) {
         return ResponseEntity.ok(productService.getByCategory(categoryName));
     }
+
+    // lấy tất cả sản phẩm
+    @GetMapping
+    public ResponseEntity<List<ProductResponse>> getAll(){
+        return ResponseEntity.ok(productService.getAll());
+    }
+
+    //lấy chi tiết sản phẩm theo slug
+    @GetMapping("/{slug}")
+    public ResponseEntity<ProductResponse> getBySlug(@PathVariable  String slug){
+        return ResponseEntity.ok(productService.getBySlug(slug));
+    }
 }

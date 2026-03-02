@@ -156,6 +156,15 @@ public class ProductService {
                 .toList();
     }
 
+    //lay tat cả sản phẩm
+    public List<ProductResponse> getAll(){
+        return productRepository.findAllActive()
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+
     private String generateSlug(String name, UUID id){
         String bassSlug = name.toLowerCase()
                 .replaceAll("[àáạảãâầấậẩẫăằắặẳẵ]", "a")

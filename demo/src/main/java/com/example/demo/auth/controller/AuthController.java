@@ -6,11 +6,16 @@ import com.example.demo.auth.entity.RefreshToken;
 import com.example.demo.auth.service.AuthService;
 import com.example.demo.auth.service.RefreshTokenService;
 import com.example.demo.config.security.JwtTokenProvider;
+import com.example.demo.user.entity.User;
+import com.example.demo.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("api/auth")
@@ -21,18 +26,35 @@ public class AuthController {
     private final JwtTokenProvider tokenProvider;
     private final AuthService authService;
     private final RefreshTokenService refreshTokenService;
+    private final UserRepository userRepository;
 
     @PostMapping("/login")
+    @Transactional
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request){
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail(),
                         request.getPassword())
         );
+
+        // lấy user info
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<String> roles = user.getRoles().stream()
+                .map(userRole -> userRole.getRole().getRole())
+                .toList();
+
         String accessToken = tokenProvider.generateToken(request.getEmail());
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(request.getEmail());
 
-        return ResponseEntity.ok(new AuthResponse(accessToken, refreshToken.getToken()));
+        return ResponseEntity.ok(new AuthResponse(
+                accessToken,
+                refreshToken.getToken(),
+                user.getEmail(),
+                user.getUsername(),
+                roles
+        ));
     }
 
     @PostMapping("/register/user")
@@ -47,14 +69,25 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
+    @Transactional
     public ResponseEntity<AuthResponse> refresh(@RequestBody RefreshTokenRequest request) {
         RefreshToken refreshToken = refreshTokenService.findByToken(request.getRefreshToken());
         refreshTokenService.verifyExpiration(refreshToken);
 
-        String email = refreshToken.getUser().getEmail();
-        String newAccessToken = tokenProvider.generateToken(email);
+        User user = refreshToken.getUser();
+        List<String> roles = user.getRoles().stream()
+                .map(userRole -> userRole.getRole().getRole())
+                .toList();
 
-        return ResponseEntity.ok(new AuthResponse(newAccessToken, refreshToken.getToken()));
+        String newAccessToken = tokenProvider.generateToken(user.getEmail());
+
+        return ResponseEntity.ok(new AuthResponse(
+                newAccessToken,
+                refreshToken.getToken(),
+                user.getEmail(),
+                user.getUsername(),
+                roles
+        ));
     }
 
     @PostMapping("/logout")

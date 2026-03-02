@@ -46,4 +46,10 @@ public class CategoryController {
     public ResponseEntity<CategoryResponse> getById(@PathVariable Long id){
         return ResponseEntity.ok(categoryService.getById(id));
     }
+    // lấy danh mục dạng tree
+    @GetMapping("/tree")
+    public ResponseEntity<List<CategoryResponse>> getTree(){
+        return ResponseEntity.ok(categoryService.getTree());
+    }
+
 }

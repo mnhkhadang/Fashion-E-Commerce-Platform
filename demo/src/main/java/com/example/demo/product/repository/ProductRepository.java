@@ -19,7 +19,7 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
             "JOIN FETCH p.shop " +
             "JOIN FETCH p.category c " +
             "LEFT JOIN FETCH p.mediaList " +
-            "WHERE c.name = :categoryName AND p.active = true")
+            "WHERE (c.name = :categoryName OR c.parent.name = :categoryName) AND p.active = true")
     List<Product> findByCategoryName(@Param("categoryName") String categoryName);
 
     @Query("SELECT p FROM Product p " +
@@ -49,4 +49,11 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
             "LEFT JOIN FETCH p.mediaList " +
             "WHERE p.slug = :slug AND p.active = true")
     Optional<Product> findBySlug(@Param("slug") String slug);
+
+    @Query("SELECT p FROM Product p " +
+            "LEFT JOIN FETCH p.mediaList " +
+            "LEFT JOIN FETCH p.shop " +
+            "LEFT JOIN FETCH p.category " +
+            "WHERE p.active = true")
+    List<Product> findAllActive();
 }

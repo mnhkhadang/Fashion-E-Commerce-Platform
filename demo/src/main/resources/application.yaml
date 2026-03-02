@@ -47,3 +47,8 @@ logging:
   level:
     org.hibernate.SQL: off
     org.hibernate.type.descriptor.sql.BasicBinder: off
+
+cloudinary:
+  cloud-name: dkzmro70z
+  api-key: 823543818962586
+  api-secret: toCQQtRfGrqsZeTmg-kShKb6-44
