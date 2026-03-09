@@ -5,16 +5,13 @@ import com.example.demo.location.dto.ProvinceResponse;
 import com.example.demo.location.service.LocationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Controller
+@RestController
 @RequiredArgsConstructor
-@RestController("/api/locations")
+@RequestMapping("/api/locations")
 public class LocationController {
 
     private final LocationService locationService;
@@ -25,9 +22,10 @@ public class LocationController {
         return ResponseEntity.ok(locationService.getAllProvinces());
     }
 
-    // lấy danh sách huyện
-    @GetMapping("/provinces/{code}/districts")
-    public ResponseEntity<List<DistrictResponse>> getDistrictByProvince(@PathVariable Integer provinceCode){
+    @GetMapping("/districts")
+    public ResponseEntity<List<DistrictResponse>> getDistrictByProvince(
+            @RequestParam(name = "provinceCode") Integer provinceCode
+    ) {
         return ResponseEntity.ok(locationService.getDistrictByProvince(provinceCode));
     }
 }

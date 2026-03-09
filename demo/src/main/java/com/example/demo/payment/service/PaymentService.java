@@ -2,6 +2,7 @@ package com.example.demo.payment.service;
 
 import com.example.demo.cart.entity.Cart;
 import com.example.demo.cart.entity.CartItem;
+import com.example.demo.cart.repository.CartItemRepository;
 import com.example.demo.cart.repository.CartRepository;
 import com.example.demo.order.dto.OrderResponse;
 import com.example.demo.order.entity.Order;
@@ -34,11 +35,11 @@ import java.util.stream.Collectors;
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
-    private final OrderRepository orderRepository;
     private final CartRepository cartRepository;
     private final ShippingAddressRepository shippingAddressRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final CartItemRepository cartItemRepository;
 
     //checkout
     @Transactional
@@ -145,7 +146,10 @@ public class PaymentService {
         paymentRepository.save(payment);
 
         //xóa item khỏi giỏ hàng
-        cart.getItems().removeIf(item -> request.getSlugs().contains(item.getProduct().getSlug()));
+        List<String> slugs = request.getSlugs();
+        cart.getItems().removeIf(item -> slugs.contains(item.getProduct().getSlug()));
+        cartItemRepository.deleteByCartIdAndProductSlugIn(cart.getId(), slugs);
+        cartRepository.save(cart);
         cartRepository.save(cart);
 
         return toResponse(payment);

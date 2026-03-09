@@ -54,34 +54,34 @@ public class OrderService {
         return toResponse(order);
     }
 
-    //user hủy đơn hàng
-    @Transactional
-    public OrderResponse cancelOrder(String email, String orderCode){
-        Order order = orderRepository.findByOrderCode(orderCode)
-                .orElseThrow(()-> new RuntimeException("Order not found"));
+        //user hủy đơn hàng
+        @Transactional
+        public OrderResponse cancelOrder(String email, String orderCode){
+            Order order = orderRepository.findByOrderCode(orderCode)
+                    .orElseThrow(()-> new RuntimeException("Order not found"));
 
-        if(!order.getUser().getEmail().equals(email)){
-            throw new RuntimeException("Order not found");
-        }
+            if(!order.getUser().getEmail().equals(email)){
+                throw new RuntimeException("Order not found");
+            }
 
-        // chỉ cho hủy khi pending or confirm
-        if(order.getStatus() != OrderStatus.PENDING &&
-           order.getStatus() != OrderStatus.CONFIRMED){
-            throw new RuntimeException("Cannot cancel order. Please use return process");
-        }
-        // hoàn lại stock
-        order.getItems().forEach(item -> {
-            productRepository.findBySlug(item.getProductSlug()).ifPresent(product -> {
-                product.setStock(product.getStock()+item.getQuantity());
-                product.setSold(product.getSold() - item.getQuantity());
-                productRepository.save(product);
+            // chỉ cho hủy khi pending or confirm
+            if(order.getStatus() != OrderStatus.PENDING &&
+               order.getStatus() != OrderStatus.CONFIRMED){
+                throw new RuntimeException("Cannot cancel order. Please use return process");
+            }
+            // hoàn lại stock
+            order.getItems().forEach(item -> {
+                productRepository.findBySlug(item.getProductSlug()).ifPresent(product -> {
+                    product.setStock(product.getStock()+item.getQuantity());
+                    product.setSold(product.getSold() - item.getQuantity());
+                    productRepository.save(product);
+                });
             });
-        });
 
-        order.setStatus(OrderStatus.CANCELLED);
-        return toResponse(orderRepository.save(order));
+            order.setStatus(OrderStatus.CANCELLED);
+            return toResponse(orderRepository.save(order));
 
-    }
+        }
 
     //shop xem đơn hàng của mình
     public List<OrderResponse> getShopOrders(String email){
@@ -140,7 +140,7 @@ public class OrderService {
 
     private String generateOrderCode(){
         String data = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String random = String.format("%05", new Random().nextInt(999999));
+        String random = String.format("%05d", new Random().nextInt(999999));
         return "ORD_" +data + "-" + random;
     }
 

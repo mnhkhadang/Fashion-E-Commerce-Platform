@@ -55,12 +55,12 @@ export default function ProductDetail() {
   }
 
   const handleBuyNow = async () => {
-    if (!user) {
-      navigate('/login')
-      return
+    try {
+        await api.post('/api/cart/items', { slug: product.slug, quantity })
+        navigate('/cart')
+    } catch {
+        console.error('Lỗi khi mua ngay')
     }
-    await handleAddToCart()
-    navigate('/user') 
   }
 
   if (loading) return (

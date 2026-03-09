@@ -29,8 +29,8 @@ public class AdminService {
                 .stream()
                 .map(user -> new UserResponse(
                         user.getId(),
-                        user.getEmail(),
                         user.getUsername(),
+                        user.getEmail(),
                         user.isEnable(),
                         user.getRoles().stream()
                                 .map(ur -> ur.getRole().getRole()).toList()
