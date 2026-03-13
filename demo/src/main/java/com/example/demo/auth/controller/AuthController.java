@@ -62,11 +62,7 @@ public class AuthController {
         authService.registerUser(request);
         return ResponseEntity.ok("User registered successful");
     }
-    @PostMapping("/register/shop")
-    public ResponseEntity<String> registerShop(@RequestBody RegisterShopRequest request){
-        authService.registerShop(request);
-        return ResponseEntity.ok("Shop register successfully");
-    }
+
 
     @PostMapping("/refresh")
     @Transactional

@@ -31,37 +31,8 @@ public class AuthService {
     public void registerUser(RegisterUserRequest request){
         register(request, "ROLE_USER");
     }
-    @Transactional
-    public void registerShop(RegisterShopRequest request){
-        if(userRepositor.existsByEmail(request.getEmail())){
-            throw new RuntimeException("Email already exists");
-        }
-        Role role = roleRepository.findByRole("ROLE_SHOP")
-                .orElseThrow(()-> new RuntimeException("Role not found"));
-
-        //tạo user
-        User user = new User();
-        user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
 
 
-        UserRole userRole = new UserRole();
-        userRole.setUser(user);
-        userRole.setRole(role);
-        user.setRoles(new ArrayList<>(List.of(userRole)));
-        userRepositor.save(user);
-
-        //tạo shop
-        Shop shop = new Shop();
-        shop.setName(request.getShopName());
-        shop.setDescription(request.getDescription());
-        shop.setAddress(request.getAddress());
-        shop.setPhone(request.getPhone());
-        shop.setAvatar(request.getAvatar());
-        shop.setOwner(user);
-        shopRepository.save(shop);
-    }
 
     private void register(RegisterUserRequest request, String roleName){
 

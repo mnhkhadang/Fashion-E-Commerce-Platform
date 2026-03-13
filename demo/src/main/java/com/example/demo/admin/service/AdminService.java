@@ -64,6 +64,7 @@ public class AdminService {
     }
 
     //gỡ role khỏi user
+    @Transactional
     public void removeRole(String email, String roleName){
         User user = userRepository.findByEmailWithRoles(email)
                 .orElseThrow(()-> new RuntimeException("User not found"));

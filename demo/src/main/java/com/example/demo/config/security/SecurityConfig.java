@@ -75,10 +75,17 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/categories/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/categories/**").hasRole("ADMIN")
 
+                        // Shop Registration
+                        .requestMatchers(HttpMethod.POST, "/api/shop-registrations").hasRole("USER")
+                        .requestMatchers(HttpMethod.GET, "/api/shop-registrations/my").hasRole("USER")
+                        .requestMatchers("/api/shop-registrations/**").hasRole("ADMIN")
+
                         // Shop
                         .requestMatchers(HttpMethod.GET, "/api/shop").permitAll()
                         .requestMatchers("/api/shop/**").hasRole("SHOP")
-                        .requestMatchers("/api/user/**").hasRole("USER")
+
+                        // User profile
+                        .requestMatchers("/api/user/**").authenticated()
 
                         // Cart
                         .requestMatchers(HttpMethod.GET, "/api/cart/**").hasAnyRole("USER", "ADMIN")
@@ -99,6 +106,12 @@ public class SecurityConfig {
 
                         // Payment
                         .requestMatchers("/api/payments/**").hasAnyRole("USER", "ADMIN")
+
+                        // Reviews
+                        .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/reviews/**").hasAnyRole("USER", "SHOP", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/reviews/**").hasAnyRole("USER", "SHOP", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/reviews/**").hasAnyRole("USER", "SHOP", "ADMIN")
 
                         .requestMatchers(HttpMethod.POST, "/api/upload").hasAnyRole("SHOP", "USER", "ADMIN")
 

@@ -51,4 +51,16 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             "WHERE s.owner.email = :email AND o.status = :status " +
             "ORDER BY o.createdAt DESC")          // ← sửa createAt
     List<Order> findByShopOwnerEmailAndStatus(@Param("email") String email, @Param("status") OrderStatus status);
+
+    @Query("""
+    SELECT COUNT(o) > 0 FROM Order o
+    JOIN o.items i
+    WHERE o.user.id = :userId
+    AND o.status = 'DELIVERED'
+    AND i.productSlug = :productSlug
+    """)
+    boolean existsDeliveredOrderWithProduct(
+            @Param("userId") UUID userId,
+            @Param("productSlug") String productSlug
+    );
 }

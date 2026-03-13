@@ -44,10 +44,11 @@ public class User {
             // - update(user) -> update user_roles
             // -delete(user) -> delete user_role
             // không lan sang Role
-            fetch = FetchType.LAZY
+            fetch = FetchType.LAZY,
             // không load danh sách roles khi load User
             // chỉ khi gọi user.getRoles() mới query DB
             // -> tránh tốn tài nguyên , trách join dư thừa
+            orphanRemoval = true
     )
     private List<UserRole> roles;
 

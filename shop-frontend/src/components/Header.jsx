@@ -52,7 +52,7 @@ export default function Header({searchQuery, onSearchChange}){
           <div className='hidden sm:flex items-center gap-1 shrink-0 ml-auto'>
             {user ? (
               <>
-                {/* Giỏ hàng */}
+                {/* Giỏ hàng - chỉ USER */}
                 {user.roles.includes('ROLE_USER') && (
                   <Link to="/cart" className='text-white bg-white/15 hover:bg-white/25 rounded px-3 py-2 text-xs font-semibold no-underline'>
                     🛒 Giỏ hàng
@@ -64,26 +64,67 @@ export default function Header({searchQuery, onSearchChange}){
                   <button className='flex items-center gap-2 text-white bg-white/15 hover:bg-white/25 rounded px-3 py-2 text-xs font-semibold border-0 cursor-pointer'>
                     👤 {user.username} ▾
                   </button>
-                  <div className='absolute right-0 top-full mt-1 w-44 bg-white rounded-lg shadow-lg overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50'>
-                    <Link to="/profile" className='flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 no-underline'>
-                      👤 Tài Khoản Của Tôi
-                    </Link>
-                    <Link to="/orders" className='flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 no-underline'>
-                      📦 Đơn Mua
-                    </Link>
+                  <div className='absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50'>
+
+                    {/* USER links */}
+                    {user.roles.includes('ROLE_USER') && (
+                      <>
+                        <Link to="/profile" className='flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 no-underline'>
+                          👤 Tài khoản của tôi
+                        </Link>
+                        <Link to="/orders" className='flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 no-underline'>
+                          📦 Đơn mua
+                        </Link>
+                        <Link to="/profile/address" className='flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 no-underline'>
+                          📍 Địa chỉ của tôi
+                        </Link>
+                        {!user.roles.includes('ROLE_SHOP') && (
+                          <Link to="/register-shop" className='flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 no-underline'>
+                            🏪 Đăng ký bán hàng
+                          </Link>
+                        )}
+                        <Link to="/register-shop/status" className='flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 no-underline'>
+                        📋 Trạng thái đăng ký shop
+                      </Link>
+                      </>
+                    )}
+
+                    {/* SHOP links */}
                     {user.roles.includes('ROLE_SHOP') && (
-                      <Link to="/shop" className='flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 no-underline'>
-                        🏪 Shop
-                      </Link>
+                      <>
+                        <div className='px-4 py-1.5 text-[10px] text-gray-400 uppercase tracking-wider font-semibold bg-gray-50'>
+                          Quản lý shop
+                        </div>
+                        <Link to="/shop" className='flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 no-underline'>
+                          🏪 Dashboard
+                        </Link>
+                        <Link to="/shop/products" className='flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 no-underline'>
+                          📦 Sản phẩm
+                        </Link>
+                        <Link to="/shop/orders" className='flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 no-underline'>
+                          🛍 Đơn hàng
+                        </Link>
+                      </>
                     )}
+
+                    {/* ADMIN links */}
                     {user.roles.includes('ROLE_ADMIN') && (
-                      <Link to="/admin" className='flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 no-underline'>
-                        ⚙ Admin
-                      </Link>
+                      <>
+                        <div className='px-4 py-1.5 text-[10px] text-gray-400 uppercase tracking-wider font-semibold bg-gray-50'>
+                          Quản trị
+                        </div>
+                        <Link to="/admin" className='flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 no-underline'>
+                          ⚙️ Admin Panel
+                        </Link>
+                        <Link to="/admin/registrations" className='flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 no-underline'>
+                          📋 Đơn đăng ký shop
+                        </Link>
+                      </>
                     )}
+
                     <div className='border-t border-gray-100'></div>
-                    <button onClick={handleLogout} className='w-full flex items-center gap-2 px-4 py-3 text-sm text-red-500 hover:bg-red-50 cursor-pointer bg-transparent border-0'>
-                      🚪 Đăng Xuất
+                    <button onClick={handleLogout} className='w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 cursor-pointer bg-transparent border-0'>
+                      🚪 Đăng xuất
                     </button>
                   </div>
                 </div>

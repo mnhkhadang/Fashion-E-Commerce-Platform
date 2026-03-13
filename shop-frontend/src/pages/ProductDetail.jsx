@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
+import ReviewSection from '../components/ReviewSection'
 import { useAuth } from '../context/useAuth'
 
 export default function ProductDetail() {
@@ -17,6 +18,7 @@ export default function ProductDetail() {
   const [searchQuery, setSearchQuery] = useState('')
   const [addingCart, setAddingToCart] = useState(false)
   const [message, setMessage] = useState(null)
+  const [reviewSummary, setReviewSummary] = useState(null)
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -33,11 +35,15 @@ export default function ProductDetail() {
     fetchProduct()
   }, [slug])
 
+  useEffect(() => {
+    if (!slug) return
+    api.get(`/api/reviews/product/${slug}`)
+      .then(res => setReviewSummary(res.data))
+      .catch(() => {})
+  }, [slug])
+
   const handleAddToCart = async () => {
-    if (!user) {
-      navigate('/login')
-      return
-    }
+    if (!user) { navigate('/login'); return }
     if (!user.roles.includes('ROLE_USER')) {
       setMessage({ type: 'error', text: 'Chỉ người dùng mới có thể thêm vào giỏ hàng' })
       return
@@ -56,11 +62,17 @@ export default function ProductDetail() {
 
   const handleBuyNow = async () => {
     try {
-        await api.post('/api/cart/items', { slug: product.slug, quantity })
-        navigate('/cart')
+      await api.post('/api/cart/items', { slug: product.slug, quantity })
+      navigate('/cart')
     } catch {
-        console.error('Lỗi khi mua ngay')
+      console.error('Lỗi khi mua ngay')
     }
+  }
+
+  const renderStars = (rating) => {
+    return [1, 2, 3, 4, 5].map(star => (
+      <span key={star} className={star <= Math.round(rating) ? 'text-yellow-400' : 'text-gray-200'}>★</span>
+    ))
   }
 
   if (loading) return (
@@ -88,10 +100,7 @@ export default function ProductDetail() {
         <nav className='text-xs text-gray-400 mb-4 flex items-center gap-1'>
           <button onClick={() => navigate('/')} className='hover:text-orange-500 cursor-pointer bg-transparent border-0 p-0'>Trang chủ</button>
           <span>›</span>
-          <button 
-            onClick={() => navigate(`/category/${encodeURIComponent(product.categoryName)}`)} 
-            className='hover:text-orange-500 cursor-pointer bg-transparent border-0 p-0'
-          >
+          <button onClick={() => navigate(`/category/${encodeURIComponent(product.categoryName)}`)} className='hover:text-orange-500 cursor-pointer bg-transparent border-0 p-0'>
             {product.categoryName}
           </button>
           <span>›</span>
@@ -112,15 +121,12 @@ export default function ProductDetail() {
                 />
               </div>
               {product.mediaList?.length > 1 && (
-                <div className='flex gap-2 overflow-x-auto pb-2 scrollbar-hide'>
+                <div className='flex gap-2 overflow-x-auto pb-2'>
                   {product.mediaList.map((media, idx) => (
-                    <button 
-                      key={idx}
-                      onClick={() => setSelectedImage(idx)}
+                    <button key={idx} onClick={() => setSelectedImage(idx)}
                       className={`w-16 h-16 rounded border-2 overflow-hidden shrink-0 cursor-pointer transition-all ${
                         selectedImage === idx ? 'border-orange-500' : 'border-gray-200 hover:border-orange-300'
-                      }`}
-                    >
+                      }`}>
                       <img src={media.url} alt="" className='w-full h-full object-cover'/>
                     </button>
                   ))}
@@ -132,8 +138,20 @@ export default function ProductDetail() {
             <div className='flex-1'>
               <h1 className='text-2xl font-semibold text-gray-800 mb-2'>{product.name}</h1>
 
+              {/* Rating thật từ API */}
               <div className='flex items-center gap-4 text-sm text-gray-400 mb-6'>
-                <span className='text-orange-400 font-bold'>⭐ 4.0</span>
+                {reviewSummary && reviewSummary.totalReviews > 0 ? (
+                  <>
+                    <span className='flex items-center gap-1'>
+                      <span className='text-orange-400 font-bold'>{reviewSummary.averageRating.toFixed(1)}</span>
+                      <span className='text-sm'>{renderStars(reviewSummary.averageRating)}</span>
+                    </span>
+                    <span className='w-[1px] h-3 bg-gray-200'></span>
+                    <span>{reviewSummary.totalReviews} đánh giá</span>
+                  </>
+                ) : (
+                  <span className='text-gray-400 text-xs'>Chưa có đánh giá</span>
+                )}
                 <span className='w-[1px] h-3 bg-gray-200'></span>
                 <span>Đã bán {product.sold}</span>
                 <span className='w-[1px] h-3 bg-gray-200'></span>
@@ -146,25 +164,18 @@ export default function ProductDetail() {
                 </p>
               </div>
 
-              {/* Shop Info Block - ĐÃ SỬA LỖI LẶP LẠI */}
+              {/* Shop Info */}
               <div className='flex items-center gap-4 mb-8 py-5 border-y border-gray-100'>
                 <div className='w-14 h-14 rounded-full bg-gradient-to-tr from-orange-100 to-orange-50 flex items-center justify-center text-orange-500 font-bold text-2xl shadow-inner shrink-0 border border-orange-200'>
                   {product.shopName?.charAt(0).toUpperCase() || 'S'}
                 </div>
-                
                 <div className='flex flex-col justify-center'>
-                  <h3 className='text-base font-bold text-gray-800 m-0 leading-tight'>
-                    {product.shopName || 'Shop Name'}
-                  </h3>
+                  <h3 className='text-base font-bold text-gray-800 m-0 leading-tight'>{product.shopName || 'Shop Name'}</h3>
                   <div className='flex items-center gap-3 mt-1.5'>
-                    <button
-                      onClick={() => navigate(`/shop/${encodeURIComponent(product.shopName)}`)}
-                      className='flex items-center gap-1 text-xs text-orange-500 hover:text-white hover:bg-orange-500 border border-orange-500 px-3 py-1 rounded-sm transition-all cursor-pointer font-medium bg-transparent'
-                    >
+                    <button onClick={() => navigate(`/shop/${encodeURIComponent(product.shopName)}`)}
+                      className='flex items-center gap-1 text-xs text-orange-500 hover:text-white hover:bg-orange-500 border border-orange-500 px-3 py-1 rounded-sm transition-all cursor-pointer font-medium bg-transparent'>
                       🏪 Xem Shop
                     </button>
-                    <span className='text-[11px] text-gray-400'>|</span>
-                    <span className='text-[11px] text-gray-500'>Đánh giá cực tốt</span>
                   </div>
                 </div>
               </div>
@@ -173,15 +184,11 @@ export default function ProductDetail() {
               <div className='flex items-center gap-6 mb-8'>
                 <span className='text-sm text-gray-500 font-medium'>Số lượng</span>
                 <div className='flex items-center border border-gray-300 rounded-sm overflow-hidden'>
-                  <button
-                    onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                    className='w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-gray-100 cursor-pointer bg-white border-0 border-r border-gray-300 text-xl'
-                  >-</button>
+                  <button onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                    className='w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-gray-100 cursor-pointer bg-white border-0 border-r border-gray-300 text-xl'>-</button>
                   <span className='w-12 text-center text-sm font-semibold'>{quantity}</span>
-                  <button
-                    onClick={() => setQuantity(q => Math.min(product.stock, q + 1))}
-                    className='w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-gray-100 cursor-pointer bg-white border-0 border-l border-gray-300 text-xl'
-                  >+</button>
+                  <button onClick={() => setQuantity(q => Math.min(product.stock, q + 1))}
+                    className='w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-gray-100 cursor-pointer bg-white border-0 border-l border-gray-300 text-xl'>+</button>
                 </div>
                 <span className='text-xs text-gray-400'>{product.stock} sản phẩm sẵn có</span>
               </div>
@@ -195,18 +202,12 @@ export default function ProductDetail() {
               )}
 
               <div className='flex gap-4'>
-                <button
-                  onClick={handleAddToCart}
-                  disabled={addingCart || product.stock === 0}
-                  className='flex-1 border-2 border-orange-500 text-orange-500 hover:bg-orange-50 py-3.5 rounded-sm font-bold transition-all cursor-pointer bg-white disabled:opacity-50 uppercase text-sm'
-                >
+                <button onClick={handleAddToCart} disabled={addingCart || product.stock === 0}
+                  className='flex-1 border-2 border-orange-500 text-orange-500 hover:bg-orange-50 py-3.5 rounded-sm font-bold transition-all cursor-pointer bg-white disabled:opacity-50 uppercase text-sm'>
                   {addingCart ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
                 </button>
-                <button 
-                  onClick={handleBuyNow}
-                  disabled={product.stock === 0}
-                  className='flex-1 bg-orange-500 hover:bg-orange-600 text-white py-3.5 rounded-sm font-bold transition-all cursor-pointer border-0 shadow-lg shadow-orange-500/20 disabled:opacity-50 uppercase text-sm'
-                >
+                <button onClick={handleBuyNow} disabled={product.stock === 0}
+                  className='flex-1 bg-orange-500 hover:bg-orange-600 text-white py-3.5 rounded-sm font-bold transition-all cursor-pointer border-0 shadow-lg shadow-orange-500/20 disabled:opacity-50 uppercase text-sm'>
                   Mua ngay
                 </button>
               </div>
@@ -215,13 +216,18 @@ export default function ProductDetail() {
         </div>
 
         {/* Description Section */}
-        <div className='bg-white rounded-lg shadow-sm p-8'>
+        <div className='bg-white rounded-lg shadow-sm p-8 mb-4'>
           <h2 className='text-lg font-bold text-gray-800 mb-5 pb-3 border-b border-gray-100 uppercase tracking-wide'>
             Chi tiết sản phẩm
           </h2>
           <div className='text-sm text-gray-600 leading-relaxed whitespace-pre-line'>
             {product.description || 'Thông tin mô tả đang được cập nhật...'}
           </div>
+        </div>
+
+        {/* Reviews Section */}
+        <div className='bg-white rounded-lg shadow-sm p-8'>
+          <ReviewSection productSlug={slug} />
         </div>
       </div>
       <Footer />
