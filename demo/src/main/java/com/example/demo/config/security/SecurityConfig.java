@@ -105,6 +105,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/orders/**").hasAnyRole("USER", "ADMIN")
 
                         // Payment
+                        // VNPay callback phải đứng TRƯỚC rule chung — first-match-wins
+                        .requestMatchers(HttpMethod.GET, "/api/payments/vnpay-callback").permitAll()
                         .requestMatchers("/api/payments/**").hasAnyRole("USER", "ADMIN")
 
                         // Reviews

@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -43,7 +44,18 @@ public class CartService {
         Cart cart = getOrCreateCart(email);
         return toResponse(cart);
     }
-    // thêm sp vào giỏ hàng
+    /**
+     * Thêm sản phẩm vào giỏ hàng.
+     *
+     * Validate dùng availableStock (stock - reservedStock) thay vì stock thô
+     * để tránh thêm sản phẩm đang bị hold bởi user khác.
+     *
+     * Lưu addedPrice = giá hiện tại tại thời điểm thêm vào cart
+     * → dùng để so sánh và cảnh báo khi giá thay đổi.
+     *
+     * Nếu sản phẩm đã có trong cart → cộng thêm quantity, cập nhật addedPrice
+     * theo giá mới nhất (user chủ động thêm lại = chấp nhận giá hiện tại).
+     */
     @Transactional
     public CartResponse addItem(String email, CartItemRequest request){
         Cart cart = getOrCreateCart(email);
@@ -52,26 +64,41 @@ public class CartService {
         if(!product.isActive()){
             throw new RuntimeException("Product is not available");
         }
-        if(product.getStock() < request.getQuantity()){
+        // Dùng availableStock thay vì stock thô
+        if (product.getAvailableStock() < request.getQuantity()){
             throw new RuntimeException("Not enough stock");
         }
 
-        // kiểm tra sp đã có trong giỏ hàng chưa
-        cartItemRepository.findByCartIdAndProductId(cart.getId(), product.getId())
-                .ifPresentOrElse(
-                        existingItem -> existingItem.setQuantity(existingItem.getQuantity() + request.getQuantity()),
-                        ()->{
-                            CartItem newItem = new CartItem();
-                            newItem.setCart(cart);
-                            newItem.setProduct(product);
-                            newItem.setQuantity(request.getQuantity());
-                            cart.getItems().add(newItem);
-                        }
-                );
+        Optional<CartItem> existingItemOpt = cartItemRepository.findByCartIdAndProductId(cart.getId(), product.getId());
+
+        if(existingItemOpt.isPresent()){
+            CartItem existingItem = existingItemOpt.get();
+            int newQty = existingItem.getQuantity() + request.getQuantity();
+            if(product.getAvailableStock() < newQty){
+                throw new RuntimeException("Not enough stock");
+            }
+            existingItem.setQuantity(newQty);
+            // Cập nhật addedPrice khi user chủ động thêm lại
+            // → xem như user đã acknowledge giá mới
+            existingItem.setAddedPrice(product.getPrice());
+        }else{
+            CartItem newItem = new CartItem();
+            newItem.setCart(cart);
+            newItem.setProduct(product);
+            newItem.setQuantity(request.getQuantity());
+            newItem.setAddedPrice(product.getPrice());
+            cart.getItems().add(newItem);
+        }
 
         return toResponse(cartRepository.save(cart));
+
+
     }
-    // Cập nhật số lượng
+
+    /**
+     * Cập nhật số lượng sản phẩm trong giỏ hàng.
+     * quantity <= 0 → xóa item.
+     */
     @Transactional
     public CartResponse updateItem(String email, CartItemUpdateRequest request){
         Cart cart = getOrCreateCart(email);
@@ -90,10 +117,13 @@ public class CartService {
             cart.getItems().remove(item);
             cartItemRepository.delete(item);
         }else {
-            if(item.getProduct().getStock() < request.getQuantity()){
+            // Dùng availableStock
+            if (product.getAvailableStock() < request.getQuantity()){
                 throw new RuntimeException("Not enough stock");
             }
             item.setQuantity(request.getQuantity());
+            // Không cập nhật addedPrice ở đây —
+            // user chỉ đổi số lượng, không có nghĩa là acknowledge giá mới
         }
         return toResponse(cartRepository.save(cart));
 
@@ -108,9 +138,7 @@ public class CartService {
 
         CartItem item = cartItemRepository.findByCartIdAndProductId(cart.getId(), product.getId())
                 .orElseThrow(()-> new RuntimeException("Cart item not found"));
-        if(!item.getCart().getId().equals(cart.getId())){
-            throw new RuntimeException("Cart item not found");
-        }
+
         cart.getItems().remove((item));
         cartItemRepository.delete(item);
         return toResponse(cartRepository.save(cart));
@@ -129,17 +157,42 @@ public class CartService {
     private CartResponse toResponse(Cart cart){
         List<CartResponse.CartItemResponse> itemResponses = cart.getItems()
                 .stream()
-                .map(item -> new CartResponse.CartItemResponse(
-                        item.getId(),
-                        item.getProduct().getName(),
-                        item.getProduct().getSlug(),
-                        item.getProduct().getPrice(),
-                        item.getQuantity(),
-                        item.getProduct().getPrice().multiply(BigDecimal.valueOf(item.getQuantity()))
-                )).toList();
+                .map(item -> {
+                    Product product = item.getProduct();
+                    BigDecimal currentPrice = product.getPrice();
+                    BigDecimal addedPrice = item.getAddedPrice();
+
+
+                    boolean inactive = !product.isActive();
+                    boolean outOfStock = product.getAvailableStock() < item.getQuantity();
+                    // Chỉ cảnh báo giá nếu có addedPrice (data sau V6)
+                    // và giá thực sự thay đổi
+                    boolean priceChanged = addedPrice != null &&
+                            currentPrice.compareTo(addedPrice) != 0;
+
+                    BigDecimal subtTotal = currentPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
+
+                    return  new CartResponse.CartItemResponse(
+                            item.getId(),
+                            product.getName(),
+                            product.getSlug(),
+                            currentPrice,
+                            addedPrice,
+                            item.getQuantity(),
+                            subtTotal,
+                            priceChanged,
+                            outOfStock,
+                            inactive
+                    );
+                }).toList();
+        // Tổng tiền chỉ tính item hợp lệ (không inactive, không outOfStock)
         BigDecimal totalPrice = itemResponses.stream()
+                .filter(i -> i.isInactive() && !i.isOutOfStock())
                 .map(CartResponse.CartItemResponse::getSubTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        return new CartResponse(cart.getId(), itemResponses, totalPrice);
+                .reduce(BigDecimal.ZERO,BigDecimal::add);
+        boolean hasWarning = itemResponses.stream()
+                .anyMatch(i -> i.isPriceChanged() || i.isOutOfStock() || i.isInactive());
+
+        return new CartResponse(cart.getId(), itemResponses, totalPrice, hasWarning);
     }
 }

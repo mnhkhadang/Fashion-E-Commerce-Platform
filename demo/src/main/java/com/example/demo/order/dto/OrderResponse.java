@@ -17,6 +17,8 @@ public class OrderResponse {
     private BigDecimal totalPrice;
     private String note;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+
 
     //thông tin giao hàng
     private String shippingFullName;

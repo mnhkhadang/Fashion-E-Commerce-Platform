@@ -2,10 +2,9 @@ package com.example.demo.auth.service;
 
 
 import com.example.demo.auth.dto.RegisterUserRequest;
-import com.example.demo.auth.dto.RegisterShopRequest;
 import com.example.demo.role.entity.Role;
 import com.example.demo.role.repository.RoleRepository;
-import com.example.demo.shop.entity.Shop;
+
 import com.example.demo.shop.repository.ShopRepository;
 import com.example.demo.user.entity.User;
 import com.example.demo.user.entity.UserRole;

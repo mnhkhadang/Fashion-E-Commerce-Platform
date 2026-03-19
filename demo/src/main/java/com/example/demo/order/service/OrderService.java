@@ -1,147 +1,202 @@
 package com.example.demo.order.service;
 
-import com.example.demo.cart.entity.Cart;
-import com.example.demo.cart.entity.CartItem;
-import com.example.demo.cart.repository.CartRepository;
-import com.example.demo.order.dto.OrderRequest;
+
 import com.example.demo.order.dto.OrderResponse;
 import com.example.demo.order.entity.Order;
 import com.example.demo.order.entity.OrderItem;
 import com.example.demo.order.entity.OrderStatus;
 import com.example.demo.order.repository.OrderRepository;
-import com.example.demo.product.entity.Product;
+import com.example.demo.payment.entity.PaymentMethod;
+import com.example.demo.payment.service.PaymentService;
+
 import com.example.demo.product.repository.ProductRepository;
-import com.example.demo.shippingaddress.entity.ShippingAddress;
-import com.example.demo.shippingaddress.repository.ShippingAddressRepository;
+import com.example.demo.reservation.service.ReservationService;
+
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Random;
-import java.util.stream.Collectors;
 
+import java.time.LocalDateTime;
+
+import java.util.List;
+
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderService {
 
     private final OrderRepository orderRepository;
-    private final CartRepository cartRepository;
-    private final ShippingAddressRepository shippingAddressRepository;
     private final ProductRepository productRepository;
+    private final ReservationService reservationService;
 
+    // @Lazy để tránh circular dependency:
+    // PaymentService → OrderService (completeCodPaymentIfReady)
+    // OrderService   → PaymentService (updateStatus DELIVERED)
+    private final @Lazy PaymentService paymentService;
 
-
-    // xem danh sách đơn hàng
     public List<OrderResponse> getMyOrders(String email){
-        return orderRepository.findByUserEmail(email)
+        return orderRepository.findByShopOwnerEmail(email)
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
-    //xem chi tiết đơn hàng theo orderCode;
+
     public OrderResponse getByOrderCode(String email, String orderCode){
         Order order = orderRepository.findByOrderCode(orderCode)
                 .orElseThrow(()-> new RuntimeException("Order not found"));
-
-        if(!order.getUser().getEmail().equals(email)){
+        if (!order.getUser().getEmail().equals(email)){
             throw new RuntimeException("Order not found");
         }
 
         return toResponse(order);
     }
+    /**
+     * User hủy đơn hàng.
+     *
+     * Chỉ được hủy khi PENDING hoặc CONFIRMED.
+     * Flow:
+     * 1. Validate trạng thái
+     * 2. Hoàn stock thật nếu đã bị trừ:
+     *    - COD confirmed    → stock đã trừ khi checkout → cần hoàn
+     *    - VNPay confirmed  → stock đã trừ sau callback → cần hoàn
+     *    - VNPay pending    → stock chưa trừ → chỉ release reservation
+     * 3. Release reservation → hoàn reservedStock
+     * 4. Order → CANCELLED
+     */
+    @Transactional
+    public OrderResponse cancelOrder(String email, String orderCode, String cancelReason){
+        Order order = orderRepository.findByOrderCode(orderCode)
+                .orElseThrow(()-> new RuntimeException("Order not found"));
 
-        //user hủy đơn hàng
-        @Transactional
-        public OrderResponse cancelOrder(String email, String orderCode){
-            Order order = orderRepository.findByOrderCode(orderCode)
-                    .orElseThrow(()-> new RuntimeException("Order not found"));
-
-            if(!order.getUser().getEmail().equals(email)){
-                throw new RuntimeException("Order not found");
-            }
-
-            // chỉ cho hủy khi pending or confirm
-            if(order.getStatus() != OrderStatus.PENDING &&
-               order.getStatus() != OrderStatus.CONFIRMED){
-                throw new RuntimeException("Cannot cancel order. Please use return process");
-            }
-            // hoàn lại stock
-            order.getItems().forEach(item -> {
-                productRepository.findBySlug(item.getProductSlug()).ifPresent(product -> {
-                    product.setStock(product.getStock()+item.getQuantity());
-                    product.setSold(product.getSold() - item.getQuantity());
-                    productRepository.save(product);
-                });
-            });
-
-            order.setStatus(OrderStatus.CANCELLED);
-            return toResponse(orderRepository.save(order));
-
+        if (!order.getUser().getEmail().equals(email)){
+            throw new RuntimeException("Order not found");
         }
 
-    //shop xem đơn hàng của mình
+        if(order.getStatus() != OrderStatus.PENDING &&
+           order.getStatus() != OrderStatus.CONFIRMED){
+            throw new RuntimeException("Cannot cancel order. Status: "+ order.getStatus());
+        }
+
+        // Hoàn stock thật nếu đã bị trừ
+        if (isStockDeducted(order)){
+            restoreStock(order);
+        }
+
+        // Release reservation → hoàn reservedStock
+        reservationService.releaseByOrderIds(List.of(order.getId()));
+
+        order.setStatus(OrderStatus.CANCELLED);
+        order.setCancelReason(cancelReason);
+        order.setUpdatedAt(LocalDateTime.now());
+
+        log.info("Order cancelled: orderCode = {} user= {} reason = {}", orderCode, email, cancelReason);
+        return toResponse(order);
+    }
+
+    //shop
     public List<OrderResponse> getShopOrders(String email){
         return orderRepository.findByShopOwnerEmail(email)
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
-    //shop cập nhật trạng thái đơn hàng
+
+    /**
+     * Shop cập nhật trạng thái đơn hàng.
+     *
+     * Transitions hợp lệ:
+     *   VNPay: PENDING → CONFIRMED → SHIPPING → DELIVERED
+     *   COD:   CONFIRMED → SHIPPING → DELIVERED
+     *
+     * Khi DELIVERED (COD):
+     *   → gọi completeCodPaymentIfReady() để trừ stock thật + complete payment
+     */
     @Transactional
     public OrderResponse updateStatus(String email, String orderCode, OrderStatus newStatus){
         Order order = orderRepository.findByOrderCode(orderCode)
                 .orElseThrow(()-> new RuntimeException("Order not found"));
-        //kiểm tra đơn hàng có thuộc shop này hong
         boolean belongToShop = order.getItems().stream()
                 .anyMatch(item -> item.getShop().getOwner().getEmail().equals(email));
-        if(!belongToShop){
+
+        if (!belongToShop){
             throw new RuntimeException("Order not found");
         }
-        //validate chuyển trạng thái
+
         validateStatusTransition(order.getStatus(), newStatus);
         order.setStatus(newStatus);
-        return toResponse(orderRepository.save(order));
+        order.setUpdatedAt(LocalDateTime.now());
+        orderRepository.save(order);
+
+        // COD: khi giao hàng thành công → trừ stock thật + complete payment
+        if (newStatus == OrderStatus.DELIVERED &&
+            order.getPayment() != null &&
+            order.getPayment().getMethod() == PaymentMethod.COD){
+            paymentService.completeCodPaymentIfReady(order);
+        }
+
+        log.info("Order status updated: orderCode = {} {} -> {}",orderCode, order.getStatus(), newStatus);
+        return toResponse(order);
     }
 
-    private void validateStatusTransition(OrderStatus current, OrderStatus next){
-        switch (current){
-            case PENDING -> {
-                if(next != OrderStatus.CONFIRMED)
-                    throw new RuntimeException("Invalid status transition");
-            }
-            case CONFIRMED -> {
-                if(next != OrderStatus.SHIPPING)
-                    throw new RuntimeException("Invalid status transition");
-            }
-            case SHIPPING -> {
-                if(next != OrderStatus.DELIVERED)
-                    throw new RuntimeException("Invalid status transition");
-            }
-            default -> throw new RuntimeException("Cannot change status from: "+current);
+
+    /**
+     * Kiểm tra stock thật đã bị trừ chưa để quyết định có cần hoàn không.
+     *
+     * COD:          stock bị trừ ngay khi checkout → luôn cần hoàn
+     * VNPay PENDING:   stock chưa trừ → không cần hoàn stock thật
+     * VNPay CONFIRMED: stock đã trừ sau callback → cần hoàn
+     */
+    private boolean isStockDeducted(Order order){
+        if (order.getPayment() == null)
+            return false;
+        return switch (order.getPayment().getMethod()){
+            case COD -> true;
+            case VNPAY -> order.getStatus() == OrderStatus.CONFIRMED;
+        };
+    }
+
+    /**
+     * Hoàn stock thật khi cancel.
+     * Dùng productId thay vì productSlug (slug có thể thay đổi, id thì không).
+     */
+
+    private void restoreStock(Order order){
+        for (OrderItem item : order.getItems()){
+            if (item.getProductId() == null)
+                continue;
+            productRepository.findByIdWithLock(item.getProductId()).ifPresent(product -> {
+                product.setStock(product.getStock() + item.getQuantity());
+                product.setSold(product.getSold() - item.getQuantity());
+                productRepository.save(product);
+                log.info(" Restored stock: product = {} quantity = {} ", product.getName(), item.getQuantity());
+            });
         }
     }
+    /**
+     * Validate chuyển trạng thái.
+     *
+     * PENDING   → CONFIRMED  (VNPay: sau callback, shop confirm thủ công)
+     * CONFIRMED → SHIPPING
+     * SHIPPING  → DELIVERED
+     *
+     * COD order bắt đầu từ CONFIRMED (bỏ qua PENDING)
+     * nên shop chỉ thấy CONFIRMED → SHIPPING → DELIVERED.
+     */
+    private void validateStatusTransition(OrderStatus current, OrderStatus next){
+        boolean valid = switch (current){
+            case PENDING   -> next == OrderStatus.CONFIRMED;
+            case CONFIRMED -> next == OrderStatus.SHIPPING;
+            case SHIPPING  -> next == OrderStatus.DELIVERED;
+            default        -> false;
+        };
 
-    private static OrderItem getOrderItem(CartItem cartItem, Order order, Product product) {
-        OrderItem orderItem = new OrderItem();
-        orderItem.setOrder(order);
-        orderItem.setProductName(product.getName());
-        orderItem.setProductSlug(product.getSlug());
-        orderItem.setPrice(product.getPrice());
-        orderItem.setQuantity(cartItem.getQuantity());
-        orderItem.setSubTotal(product.getPrice().multiply(BigDecimal.valueOf(cartItem.getQuantity())));
-        orderItem.setShop(product.getShop());
-        return orderItem;
-    }
-
-
-    private String generateOrderCode(){
-        String data = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String random = String.format("%05d", new Random().nextInt(999999));
-        return "ORD_" +data + "-" + random;
+        if (!valid){
+            throw new RuntimeException("Invalid status transition" + current + " -> "+ next);
+        }
     }
 
     private OrderResponse toResponse(Order order){
@@ -162,6 +217,7 @@ public class OrderService {
                 order.getTotalPrice(),
                 order.getNote(),
                 order.getCreatedAt(),
+                order.getUpdatedAt(),
                 order.getShippingFullName(),
                 order.getShippingPhone(),
                 order.getShippingStreetAddress(),

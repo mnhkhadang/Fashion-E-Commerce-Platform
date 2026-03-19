@@ -65,6 +65,12 @@ public class Order {
     @Nationalized
     private String shippingProvince;
 
+    @Column(name = "updated_At")
+    private LocalDateTime updatedAt;
+
+    @Column(name = "cancel_reason", length = 600)
+    private String cancelReason;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<OrderItem> items = new ArrayList<>();
 

@@ -19,5 +19,6 @@ public class PaymentResponse {
     private PaymentStatus status;
     private BigDecimal totalAmount;
     private LocalDateTime createdAt;
+    private LocalDateTime paidAt;
     private List<OrderResponse> orders;
 }

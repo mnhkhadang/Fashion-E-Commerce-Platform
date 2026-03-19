@@ -41,6 +41,9 @@ public class Product {
     private int stock;
 
     @Column(nullable = false)
+    private int reservedStock = 0;
+
+    @Column(nullable = false)
     private boolean active = true;
 
     @Column(nullable = false)
@@ -57,6 +60,11 @@ public class Product {
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     private List<ProductMedia> mediaList;
 
+
+    // Stock thực tế có thể mua = stock - reservedStock
+    public int getAvailableStock (){
+        return stock - reservedStock;
+    }
 
 
 }
