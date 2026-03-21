@@ -1,6 +1,9 @@
 package com.example.demo.order.service;
 
 
+import com.example.demo.auth.service.EmailService;
+import com.example.demo.common.exception.NotFoundException;
+import com.example.demo.common.exception.UnprocessableException;
 import com.example.demo.order.dto.OrderResponse;
 import com.example.demo.order.entity.Order;
 import com.example.demo.order.entity.OrderItem;
@@ -32,6 +35,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final ReservationService reservationService;
+    private final EmailService emailService;
 
     // @Lazy để tránh circular dependency:
     // PaymentService → OrderService (completeCodPaymentIfReady)
@@ -47,9 +51,9 @@ public class OrderService {
 
     public OrderResponse getByOrderCode(String email, String orderCode){
         Order order = orderRepository.findByOrderCode(orderCode)
-                .orElseThrow(()-> new RuntimeException("Order not found"));
+                .orElseThrow(()-> new NotFoundException("Order not found"));
         if (!order.getUser().getEmail().equals(email)){
-            throw new RuntimeException("Order not found");
+            throw new NotFoundException("Order not found");
         }
 
         return toResponse(order);
@@ -70,15 +74,15 @@ public class OrderService {
     @Transactional
     public OrderResponse cancelOrder(String email, String orderCode, String cancelReason){
         Order order = orderRepository.findByOrderCode(orderCode)
-                .orElseThrow(()-> new RuntimeException("Order not found"));
+                .orElseThrow(()-> new NotFoundException("Order not found"));
 
         if (!order.getUser().getEmail().equals(email)){
-            throw new RuntimeException("Order not found");
+            throw new NotFoundException("Order not found");
         }
 
         if(order.getStatus() != OrderStatus.PENDING &&
            order.getStatus() != OrderStatus.CONFIRMED){
-            throw new RuntimeException("Cannot cancel order. Status: "+ order.getStatus());
+            throw new UnprocessableException("Cannot cancel order. Status: "+ order.getStatus());
         }
 
         // Hoàn stock thật nếu đã bị trừ
@@ -118,24 +122,34 @@ public class OrderService {
     @Transactional
     public OrderResponse updateStatus(String email, String orderCode, OrderStatus newStatus){
         Order order = orderRepository.findByOrderCode(orderCode)
-                .orElseThrow(()-> new RuntimeException("Order not found"));
+                .orElseThrow(()-> new NotFoundException("Order not found"));
         boolean belongToShop = order.getItems().stream()
                 .anyMatch(item -> item.getShop().getOwner().getEmail().equals(email));
 
         if (!belongToShop){
-            throw new RuntimeException("Order not found");
+            throw new NotFoundException("Order not found");
         }
 
         validateStatusTransition(order.getStatus(), newStatus);
+
         order.setStatus(newStatus);
         order.setUpdatedAt(LocalDateTime.now());
         orderRepository.save(order);
+        // Trong updateStatus() — sau dòng orderRepository.save(order):
+        emailService.sendOrderStatusUpdateEmail(
+                order.getUser().getEmail(),
+                orderCode,
+                newStatus.name()
+        );
 
         // COD: khi giao hàng thành công → trừ stock thật + complete payment
-        if (newStatus == OrderStatus.DELIVERED &&
-            order.getPayment() != null &&
-            order.getPayment().getMethod() == PaymentMethod.COD){
-            paymentService.completeCodPaymentIfReady(order);
+        if (newStatus == OrderStatus.DELIVERED) {
+            order.setDeliveredAt(LocalDateTime.now());
+
+            if (order.getPayment() != null &&
+                    order.getPayment().getMethod() == PaymentMethod.COD) {
+                paymentService.completeCodPaymentIfReady(order);
+            }
         }
 
         log.info("Order status updated: orderCode = {} {} -> {}",orderCode, order.getStatus(), newStatus);
@@ -195,7 +209,7 @@ public class OrderService {
         };
 
         if (!valid){
-            throw new RuntimeException("Invalid status transition" + current + " -> "+ next);
+            throw new UnprocessableException("Invalid status transition" + current + " -> "+ next);
         }
     }
 

@@ -68,6 +68,9 @@ public class Order {
     @Column(name = "updated_At")
     private LocalDateTime updatedAt;
 
+    @Column(name = "delivered_at")
+    private LocalDateTime deliveredAt;
+
     @Column(name = "cancel_reason", length = 600)
     private String cancelReason;
 

@@ -109,6 +109,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/payments/vnpay-callback").permitAll()
                         .requestMatchers("/api/payments/**").hasAnyRole("USER", "ADMIN")
 
+                        // Returns
+                        .requestMatchers(HttpMethod.GET, "/api/returns/shop").hasRole("SHOP")
+                        .requestMatchers(HttpMethod.PUT, "/api/returns/**").hasRole("SHOP")
+                        .requestMatchers("/api/returns/**").hasAnyRole("USER", "ADMIN")
+
                         // Reviews
                         .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/reviews/**").hasAnyRole("USER", "SHOP", "ADMIN")

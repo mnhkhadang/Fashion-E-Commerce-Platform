@@ -1,9 +1,12 @@
 package com.example.demo.payment.service;
 
+import com.example.demo.auth.service.EmailService;
 import com.example.demo.cart.entity.Cart;
 import com.example.demo.cart.entity.CartItem;
 import com.example.demo.cart.repository.CartItemRepository;
 import com.example.demo.cart.repository.CartRepository;
+import com.example.demo.common.exception.NotFoundException;
+import com.example.demo.common.exception.UnprocessableException;
 import com.example.demo.order.dto.OrderResponse;
 
 import com.example.demo.order.entity.Order;
@@ -50,9 +53,9 @@ public class PaymentService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final CartItemRepository cartItemRepository;
-    private final OrderRepository orderRepository;
     private final ReservationService reservationService;
     private final ReservationRepository reservationRepository;
+    private final EmailService emailService;
 
     /**
      * Checkout flow mới:
@@ -78,7 +81,7 @@ public class PaymentService {
                 .orElseThrow(()-> new RuntimeException("Cart not found"));
 
         if(cart.getItems().isEmpty()){
-            throw new RuntimeException("Cart is empty");
+            throw new UnprocessableException("Cart is empty");
         }
 
         List<CartItem> selectedItems = cart.getItems().stream()
@@ -86,7 +89,7 @@ public class PaymentService {
                 .toList();
 
         if(selectedItems.isEmpty()){
-            throw new RuntimeException("Not item selected");
+            throw new UnprocessableException("Not item selected");
         }
 
         // --- Validate shipping address ---
@@ -95,7 +98,7 @@ public class PaymentService {
                 .orElseThrow(()-> new RuntimeException("Shipping address not found"));
 
         if(!shippingAddress.getOwner().getEmail().equals(email)){
-            throw new RuntimeException("Shipping address not found");
+            throw new NotFoundException("Shipping address not found");
         }
 
         User user = userRepository.findByEmail(email)
@@ -194,6 +197,22 @@ public class PaymentService {
 
         // Save payment + orders cascade
         paymentRepository.save(payment);
+        // Gửi email cho user
+        emailService.sendCheckoutSuccessEmail(
+                email,
+                payment.getPaymentCode(),
+                payment.getTotalAmount().toPlainString(),
+                payment.getMethod().name()
+        );
+        // Gửi email cho từng shop
+        orders.forEach(order -> {
+            String shopEmail = order.getItems().get(0).getShop().getOwner().getEmail();
+            emailService.sendNewOrderNotificationToShop(
+                    shopEmail,
+                    order.getOrderCode(),
+                    order.getTotalPrice().toPlainString()
+            );
+        });
         // Bước 5 — CHỈ link orderId, không complete
         for (Reservation reservation : reservations) {
             UUID productId = reservation.getProduct().getId();

@@ -1,5 +1,8 @@
 package com.example.demo.reservation.service;
 
+import com.example.demo.common.exception.ConflictException;
+import com.example.demo.common.exception.NotFoundException;
+import com.example.demo.common.exception.UnprocessableException;
 import com.example.demo.product.entity.Product;
 import com.example.demo.product.repository.ProductRepository;
 import com.example.demo.reservation.entity.Reservation;
@@ -39,15 +42,15 @@ public class ReservationService {
     public Reservation reserve(User user, UUID productId, int quantity) {
         // Lock product row để tránh race condition
         Product product = productRepository.findByIdWithLock(productId)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+                .orElseThrow(() -> new NotFoundException("Product not found"));
 
         if (!product.isActive()) {
-            throw new RuntimeException("Product is not available: " + product.getName());
+            throw new UnprocessableException("Product is not available: " + product.getName());
         }
 
         // availableStock = stock - reservedStock
         if (product.getAvailableStock() < quantity) {
-            throw new RuntimeException(
+            throw new ConflictException(
                     "Not enough stock for: " + product.getName() +
                             ". Available: " + product.getAvailableStock() +
                             ", requested: " + quantity
@@ -65,7 +68,7 @@ public class ReservationService {
                     // Có reservation cũ còn hạn: cập nhật quantity và extend TTL
                     int quantityDiff = quantity - existing.getQuantity();
                     if (quantityDiff > 0 && product.getAvailableStock() < quantityDiff) {
-                        throw new RuntimeException(
+                        throw new ConflictException(
                                 "Not enough stock to update reservation for: " + product.getName()
                         );
                     }
@@ -115,7 +118,7 @@ public class ReservationService {
 
         // Lock product để update reservedStock an toàn
         Product product = productRepository.findByIdWithLock(reservation.getProduct().getId())
-                .orElseThrow(() -> new RuntimeException("Product not found during release"));
+                .orElseThrow(() -> new NotFoundException("Product not found during release"));
 
         int newReservedStock = Math.max(0, product.getReservedStock() - reservation.getQuantity());
         product.setReservedStock(newReservedStock);
@@ -149,7 +152,7 @@ public class ReservationService {
     @Transactional
     public void complete(Reservation reservation, UUID orderId) {
         if (reservation.getStatus() != ReservationStatus.ACTIVE) {
-            throw new RuntimeException(
+            throw new UnprocessableException(
                     "Cannot complete reservation id=" + reservation.getId() +
                             " with status=" + reservation.getStatus()
             );

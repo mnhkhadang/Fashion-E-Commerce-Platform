@@ -7,6 +7,8 @@ import com.example.demo.cart.entity.Cart;
 import com.example.demo.cart.entity.CartItem;
 import com.example.demo.cart.repository.CartItemRepository;
 import com.example.demo.cart.repository.CartRepository;
+import com.example.demo.common.exception.ConflictException;
+import com.example.demo.common.exception.UnprocessableException;
 import com.example.demo.product.entity.Product;
 import com.example.demo.product.repository.ProductRepository;
 import com.example.demo.user.entity.User;
@@ -62,11 +64,11 @@ public class CartService {
         Product product = productRepository.findBySlug(request.getSlug())
                 .orElseThrow(()-> new RuntimeException("Product not found"));
         if(!product.isActive()){
-            throw new RuntimeException("Product is not available");
+            throw new UnprocessableException("Product is not available");
         }
         // Dùng availableStock thay vì stock thô
         if (product.getAvailableStock() < request.getQuantity()){
-            throw new RuntimeException("Not enough stock");
+            throw new ConflictException("Not enough stock");
         }
 
         Optional<CartItem> existingItemOpt = cartItemRepository.findByCartIdAndProductId(cart.getId(), product.getId());
@@ -75,7 +77,7 @@ public class CartService {
             CartItem existingItem = existingItemOpt.get();
             int newQty = existingItem.getQuantity() + request.getQuantity();
             if(product.getAvailableStock() < newQty){
-                throw new RuntimeException("Not enough stock");
+                throw new ConflictException("Not enough stock");
             }
             existingItem.setQuantity(newQty);
             // Cập nhật addedPrice khi user chủ động thêm lại
@@ -119,7 +121,7 @@ public class CartService {
         }else {
             // Dùng availableStock
             if (product.getAvailableStock() < request.getQuantity()){
-                throw new RuntimeException("Not enough stock");
+                throw new ConflictException("Not enough stock");
             }
             item.setQuantity(request.getQuantity());
             // Không cập nhật addedPrice ở đây —
