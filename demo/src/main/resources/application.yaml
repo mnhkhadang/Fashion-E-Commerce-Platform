@@ -1,0 +1,79 @@
+spring:
+  application:
+    name: web-ban-hang
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/WebBanHang?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=UTF-8&useUnicode=true
+    username: root
+    password: 123456Aa
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+
+  jackson:
+    time-zone: Asia/Ho_Chi_Minh
+    serialization:
+      write-dates-as-timestamps: false
+
+  sql:
+    init:
+      mode: never
+
+  mail:
+    host: sandbox.smtp.mailtrap.io
+    port: 2525
+    username: d9e960e5c84553
+    password: 45eea32a46c461
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+server:
+  port: 9090
+  error:
+    include-message: always
+    include-binding-errors: always
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+logging:
+  level:
+    org.hibernate.SQL: off
+    org.hibernate.type.descriptor.sql.BasicBinder: off
+
+cloudinary:
+  cloud-name: dkzmro70z
+  api-key: 823543818962586
+  api-secret: toCQQtRfGrqsZeTmg-kShKb6-44
+
+vnpay:
+  tmn-code: YOUR_TMN_CODE
+  hash-secret: YOUR_HASH_SECRET
+  url: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+  return-url: http://localhost:9090/api/payments/vnpay-callback
+  version: "2.1.0"
+  command: pay
+  currency-code: VND
+  locale: vn
+
+app:
+  frontend-url: http://localhost:5173
