@@ -140,6 +140,36 @@ public class EmailService {
         }
     }
 
+    // Thông báo cho user bị report (review bị ẩn)
+    @Async
+    public void sendReportResolvedEmail(String toEmail, String targetType, String reason) {
+        send(toEmail,
+                "[ShopVN] Nội dung của bạn đã bị ẩn",
+                "Xin chào,\n\n" +
+                        "Nội dung " + targetType + " của bạn đã bị ẩn do vi phạm điều khoản sử dụng.\n\n" +
+                        "Lý do: " + reason + "\n\n" +
+                        "Nếu có thắc mắc, vui lòng liên hệ bộ phận hỗ trợ.\n\n" +
+                        "Trân trọng,\nShopVN"
+        );
+    }
+
+    // Cảnh cáo shop owner
+    @Async
+    public void sendShopWarningEmail(String toEmail, String shopName,
+                                     String reason, int warningCount) {
+        send(toEmail,
+                "[ShopVN] Cảnh cáo vi phạm - " + shopName,
+                "Xin chào,\n\n" +
+                        "Shop " + shopName + " của bạn đã nhận cảnh cáo lần " + warningCount + ".\n\n" +
+                        "Lý do: " + reason + "\n\n" +
+                        (warningCount >= 3
+                                ? "Cảnh báo: Shop có thể bị khóa vĩnh viễn nếu tiếp tục vi phạm.\n\n"
+                                : "") +
+                        "Vui lòng tuân thủ điều khoản sử dụng của ShopVN.\n\n" +
+                        "Trân trọng,\nShopVN"
+        );
+    }
+
 
     // ─── Private helper
     private void send(String to, String subject, String text){

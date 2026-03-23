@@ -1,8 +1,12 @@
 import api from './api'
 
 const shopService = {
-    getMyShop: () => api.get('/api/shop/profile'),
-    updateShop: (data) => api.put('/api/shop/profile', data)
+  // PUBLIC
+  getByName: (name) => api.get(`/shop?name=${encodeURIComponent(name)}`),
+
+  // SHOP (cần auth)
+  getMyShop: () => api.get('/shop/profile'),
+  updateShop: (data) => api.put('/shop/profile', data),
 }
 
 export default shopService

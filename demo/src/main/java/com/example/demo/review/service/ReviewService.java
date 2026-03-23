@@ -1,5 +1,6 @@
 package com.example.demo.review.service;
 
+import com.example.demo.common.exception.NotFoundException;
 import com.example.demo.order.repository.OrderRepository;
 import com.example.demo.product.entity.Product;
 import com.example.demo.product.repository.ProductRepository;
@@ -46,26 +47,23 @@ public class ReviewService {
     }
     //create
     @Transactional
-    public ReviewResponse createReview(String email, String  productSlug, ReviewRequest request){
-
-
+    public ReviewResponse createReview(String email, String productSlug, ReviewRequest request) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow( ()-> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("User not found"));
         Product product = productRepository.findBySlug(productSlug)
-                .orElseThrow(()-> new RuntimeException("Product not found"));
+                .orElseThrow(() -> new RuntimeException("Product not found"));
 
-        if(!orderRepository.existsDeliveredOrderWithProduct(user.getId(), product.getSlug())){
-            throw new RuntimeException("Bạn cần mua và nhận hàng trước khi đánh giá sản phẩm "+product.getName());
+        if (!orderRepository.existsDeliveredOrderWithProduct(user.getId(), product.getSlug())) {
+            throw new RuntimeException("Bạn cần mua và nhận hàng trước khi đánh giá sản phẩm " + product.getName());
         }
 
-        if(reviewRepository.findByUserIdAndProductId(user.getId(), product.getId()).isPresent()){
-            throw new RuntimeException("Bạn đã đánh giá sản phầm này rồi. Hãy chỉnh sửa lại đánh giá trước đó ");
+        if (reviewRepository.findByUserIdAndProductId(user.getId(), product.getId()).isPresent()) {
+            throw new RuntimeException("Bạn đã đánh giá sản phẩm này rồi. Hãy chỉnh sửa lại đánh giá trước đó");
         }
 
-        if(request.getRating() < 1 || request.getRating() > 5){
+        if (request.getRating() < 1 || request.getRating() > 5) {
             throw new RuntimeException("Số sao phải từ 1 đến 5");
         }
-
 
         Review review = new Review();
         review.setUser(user);
@@ -74,47 +72,53 @@ public class ReviewService {
         review.setComment(request.getComment());
         setMediaList(review, request.getMediaRequestList());
 
-        return toResponse(reviewRepository.save(review),email);
+        // FIX: save trước, update rating sau
+        Review saved = reviewRepository.save(review);
+        updateProductrating(productSlug);
+        return toResponse(saved, email);
     }
 
     //update
     @Transactional
-    public ReviewResponse update(String email, Long reviewId, ReviewRequest request){
+    public ReviewResponse update(String email, Long reviewId, ReviewRequest request) {
         Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(()-> new RuntimeException("Review not found"));
+                .orElseThrow(() -> new RuntimeException("Review not found"));
 
-        if(!review.getUser().getEmail().equals(email)){
-            throw new RuntimeException("Bạn không có quyền thay đổi nội dung đánh giá");
+        if (!review.getUser().getEmail().equals(email)) {
+            throw new RuntimeException("Bạn không có quyền chỉnh sửa đánh giá này");
         }
 
-        LocalDateTime canEditAfter = review.getUpdatedAt().plusMinutes(COOLDOWN_MINUTES);
-        if(LocalDateTime.now().isBefore(canEditAfter)){
-            long minutesLeft = ChronoUnit.MINUTES.between(LocalDateTime.now(), canEditAfter) + 1;
-            throw new RuntimeException("Bạn chỉ có thể chỉnh sửa sau "+minutesLeft+" phút nữa");
-        }
-        if(request.getRating() < 1 || request.getRating() > 5){
+        if (request.getRating() < 1 || request.getRating() > 5) {
             throw new RuntimeException("Số sao phải từ 1 đến 5");
         }
+
         review.setRating(request.getRating());
         review.setComment(request.getComment());
-        review.getMediaList().clear();
-        setMediaList(review, request.getMediaRequestList());
         review.setUpdatedAt(LocalDateTime.now());
-        return  toResponse(reviewRepository.save(review), email);
+        setMediaList(review, request.getMediaRequestList());
 
+        // save trước, update rating sau
+        Review saved = reviewRepository.save(review);
+        updateProductrating(review.getProduct().getSlug());
+        return toResponse(saved, email);
     }
 
-    //delete
     @Transactional
-    public void deleteReview(String email, Long reviewId){
+    public void deleteReview(String email, Long reviewId) {
         Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(()-> new RuntimeException("Review not found"));
+                .orElseThrow(() -> new RuntimeException("Review not found"));
 
-        if(!review.getUser().getEmail().equals(email)){
+        if (!review.getUser().getEmail().equals(email)) {
             throw new RuntimeException("Bạn không có quyền xóa đánh giá này");
         }
 
+        // Lấy slug trước khi delete — sau khi delete không còn truy cập được nữa
+        String productSlug = review.getProduct().getSlug();
+
         reviewRepository.delete(review);
+
+        // Update rating sau khi delete
+        updateProductrating(productSlug);
     }
 
     private void setMediaList(Review review, List<ReviewMediaRequest> mediaRequests){
@@ -153,5 +157,16 @@ public class ReviewService {
                 review.getUpdatedAt(),
                 canEdit
         );
+    }
+
+    private void updateProductrating(String productSlug){
+        Product product = productRepository.findBySlug(productSlug)
+                .orElseThrow(()-> new NotFoundException("Product not found"));
+        double avg = reviewRepository.findAverageRatingByProductSlug(productSlug);
+        long count = reviewRepository.countByProductSlug(productSlug);
+
+        product.setAverageRating(avg);
+        product.setReviewCount((int) count);
+        productRepository.save(product);
     }
 }

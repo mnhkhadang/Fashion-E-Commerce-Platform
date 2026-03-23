@@ -97,6 +97,7 @@ public class ReturnService {
         return toResponse(saved);
     }
 
+    @Transactional
     // User xem danh sách return request của mình
     public List<ReturnRequestResponse> getMyReturnRequests(String email){
         return returnRequestRepository.findByUserEmail(email)
@@ -107,7 +108,7 @@ public class ReturnService {
 
     // ─── Shop
     // Shop xem tất cả return request của shop mình
-
+    @Transactional
     public List<ReturnRequestResponse> getShopReturnRequest(String email){
         return returnRequestRepository.findByShopOwnerEmail(email)
                 .stream()
@@ -265,7 +266,8 @@ public class ReturnService {
                 returnRequest.getRejectReason(),
                 returnRequest.getCreatedAt(),
                 returnRequest.getUpdatedAt(),
-                returnRequest.getReviewedAt()
+                returnRequest.getReviewedAt(),
+                returnRequest.getUser().getUsername()
         );
     }
 }

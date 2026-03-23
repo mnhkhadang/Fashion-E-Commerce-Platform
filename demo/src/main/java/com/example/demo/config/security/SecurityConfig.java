@@ -109,10 +109,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/payments/vnpay-callback").permitAll()
                         .requestMatchers("/api/payments/**").hasAnyRole("USER", "ADMIN")
 
-                        // Returns
+                        // Returns — specific routes TRƯỚC
                         .requestMatchers(HttpMethod.GET, "/api/returns/shop").hasRole("SHOP")
                         .requestMatchers(HttpMethod.PUT, "/api/returns/**").hasRole("SHOP")
-                        .requestMatchers("/api/returns/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/returns/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/returns").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/returns/**").hasAnyRole("USER", "ADMIN", "SHOP")
 
                         // Reviews
                         .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
@@ -121,6 +123,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/reviews/**").hasAnyRole("USER", "SHOP", "ADMIN")
 
                         .requestMatchers(HttpMethod.POST, "/api/upload").hasAnyRole("SHOP", "USER", "ADMIN")
+
+                        // Reports
+                        .requestMatchers(HttpMethod.POST, "/api/reports/**").hasAnyRole("USER", "SHOP", "ADMIN")
+                        .requestMatchers("/api/reports/**").hasRole("ADMIN")
 
                         .anyRequest().authenticated()
                 )

@@ -13,10 +13,11 @@ export default function ForgotPassword() {
     setError('')
     setLoading(true)
     try {
-      await api.post('/api/auth/forgot-password', { email })
+      // FIX: bỏ prefix /api
+      await api.post('/auth/forgot-password', { email })
       setSent(true)
     } catch (err) {
-      setError(err.response?.data || 'Có lỗi xảy ra, vui lòng thử lại')
+      setError(err.response?.data?.message || err.response?.data || 'Có lỗi xảy ra, vui lòng thử lại')
     } finally {
       setLoading(false)
     }
@@ -62,8 +63,11 @@ export default function ForgotPassword() {
                   required
                 />
               </div>
-              <button type="submit" disabled={loading}
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-lg transition border-0 cursor-pointer disabled:opacity-50">
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-lg transition border-0 cursor-pointer disabled:opacity-50"
+              >
                 {loading ? 'Đang gửi...' : 'Gửi link đặt lại mật khẩu'}
               </button>
             </form>

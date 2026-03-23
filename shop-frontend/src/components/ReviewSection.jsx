@@ -1,25 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
-import api from '../services/api'
 import { useAuth } from '../context/useAuth'
+import reviewService from '../services/reviewService'
+import StarRating from '../components/ui/StarRating'
+import api from '../services/api'
 
-const StarRating = ({ value, onChange, readonly = false, size = 'md' }) => {
-  const [hover, setHover] = useState(0)
-  const sz = size === 'sm' ? 'text-base' : 'text-2xl'
-  return (
-    <div className="flex gap-0.5">
-      {[1, 2, 3, 4, 5].map(star => (
-        <button key={star} type="button"
-          onClick={() => !readonly && onChange?.(star)}
-          onMouseEnter={() => !readonly && setHover(star)}
-          onMouseLeave={() => !readonly && setHover(0)}
-          className={`${sz} ${readonly ? 'cursor-default' : 'cursor-pointer'} bg-transparent border-0 p-0 leading-none`}>
-          <span className={(hover || value) >= star ? 'text-yellow-400' : 'text-gray-200'}>★</span>
-        </button>
-      ))}
-    </div>
-  )
-}
-
+// ─── MediaPreview
 const MediaPreview = ({ mediaList, onRemove }) => (
   <div className="flex flex-wrap gap-2 mt-2">
     {mediaList.map((m, i) => (
@@ -30,8 +15,11 @@ const MediaPreview = ({ mediaList, onRemove }) => (
           <video src={m.url} className="w-20 h-20 object-cover rounded border border-gray-200" />
         )}
         {onRemove && (
-          <button type="button" onClick={() => onRemove(i)}
-            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs border-0 cursor-pointer hidden group-hover:flex items-center justify-center">
+          <button
+            type="button"
+            onClick={() => onRemove(i)}
+            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs border-0 cursor-pointer hidden group-hover:flex items-center justify-center"
+          >
             ×
           </button>
         )}
@@ -43,6 +31,7 @@ const MediaPreview = ({ mediaList, onRemove }) => (
 export default function ReviewSection({ productSlug }) {
   const { user } = useAuth()
   const fileRef = useRef()
+
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [myReview, setMyReview] = useState(null)
@@ -55,10 +44,10 @@ export default function ReviewSection({ productSlug }) {
 
   const fetchReviews = async () => {
     try {
-      const res = await api.get(`/api/reviews/product/${productSlug}`)
+      const res = await reviewService.getProductReviews(productSlug)
       setSummary(res.data)
       if (user) {
-        const mine = res.data.reviews.find(r => r.username === user.username)
+        const mine = res.data.reviews?.find(r => r.username === user.username)
         setMyReview(mine || null)
       }
     } catch (err) {
@@ -75,19 +64,21 @@ export default function ReviewSection({ productSlug }) {
     if (!files.length) return
     setUploading(true)
     try {
-      const uploaded = await Promise.all(files.map(async (file, idx) => {
-        const formData = new FormData()
-        formData.append('file', file)
-        const res = await api.post('/api/upload', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
+      const uploaded = await Promise.all(
+        files.map(async (file, idx) => {
+          const formData = new FormData()
+          formData.append('file', file)
+          const res = await api.post('/upload', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          })
+          const isVideo = file.type.startsWith('video/')
+          return {
+            url: res.data.url,
+            type: isVideo ? 'VIDEO' : 'IMAGE',
+            sortOrder: form.mediaList.length + idx,
+          }
         })
-        const isVideo = file.type.startsWith('video/')
-        return {
-          url: res.data.url,
-          type: isVideo ? 'VIDEO' : 'IMAGE',
-          sortOrder: form.mediaList.length + idx
-        }
-      }))
+      )
       setForm(p => ({ ...p, mediaList: [...p.mediaList, ...uploaded] }))
     } catch {
       setError('Upload file thất bại')
@@ -100,7 +91,9 @@ export default function ReviewSection({ productSlug }) {
   const removeMedia = (index) => {
     setForm(p => ({
       ...p,
-      mediaList: p.mediaList.filter((_, i) => i !== index).map((m, i) => ({ ...m, sortOrder: i }))
+      mediaList: p.mediaList
+        .filter((_, i) => i !== index)
+        .map((m, i) => ({ ...m, sortOrder: i })),
     }))
   }
 
@@ -110,9 +103,9 @@ export default function ReviewSection({ productSlug }) {
     setSubmitting(true)
     try {
       if (editingId) {
-        await api.put(`/api/reviews/${editingId}`, form)
+        await reviewService.updateReview(editingId, form)
       } else {
-        await api.post(`/api/reviews/product/${productSlug}`, form)
+        await reviewService.createReview(productSlug, form)
       }
       setShowForm(false)
       setEditingId(null)
@@ -126,9 +119,9 @@ export default function ReviewSection({ productSlug }) {
   }
 
   const handleDelete = async (id) => {
-    if (!confirm('Xóa đánh giá này?')) return
+    if (!window.confirm('Xóa đánh giá này?')) return
     try {
-      await api.delete(`/api/reviews/${id}`)
+      await reviewService.deleteReview(id)
       await fetchReviews()
     } catch (err) {
       alert(err.response?.data || 'Có lỗi xảy ra')
@@ -140,7 +133,7 @@ export default function ReviewSection({ productSlug }) {
     setForm({
       rating: review.rating,
       comment: review.comment || '',
-      mediaList: review.mediaList || []
+      mediaList: review.mediaList || [],
     })
     setShowForm(true)
     setError('')
@@ -148,17 +141,20 @@ export default function ReviewSection({ productSlug }) {
 
   const ratingBars = [5, 4, 3, 2, 1].map(star => ({
     star,
-    count: summary?.reviews.filter(r => r.rating === star).length || 0,
+    count: summary?.reviews?.filter(r => r.rating === star).length || 0,
     pct: summary?.totalReviews
-      ? Math.round((summary.reviews.filter(r => r.rating === star).length / summary.totalReviews) * 100)
-      : 0
+      ? Math.round(
+          (summary.reviews.filter(r => r.rating === star).length / summary.totalReviews) * 100
+        )
+      : 0,
   }))
 
-  if (loading) return (
-    <div className="flex justify-center py-10">
-      <div className="w-8 h-8 rounded-full border-4 border-gray-200 border-t-orange-500 animate-spin"></div>
-    </div>
-  )
+  if (loading)
+    return (
+      <div className="flex justify-center py-10">
+        <div className="w-8 h-8 rounded-full border-4 border-gray-200 border-t-orange-500 animate-spin"></div>
+      </div>
+    )
 
   return (
     <div className="mt-8">
@@ -168,7 +164,9 @@ export default function ReviewSection({ productSlug }) {
       {summary && summary.totalReviews > 0 && (
         <div className="bg-orange-50 rounded-lg p-4 mb-5 flex gap-6 items-center">
           <div className="text-center shrink-0">
-            <p className="text-4xl font-black text-orange-500">{summary.averageRating.toFixed(1)}</p>
+            <p className="text-4xl font-black text-orange-500">
+              {summary.averageRating.toFixed(1)}
+            </p>
             <StarRating value={Math.round(summary.averageRating)} readonly size="sm" />
             <p className="text-xs text-gray-400 mt-1">{summary.totalReviews} đánh giá</p>
           </div>
@@ -178,7 +176,10 @@ export default function ReviewSection({ productSlug }) {
                 <span className="w-4 text-right">{star}</span>
                 <span className="text-yellow-400">★</span>
                 <div className="flex-1 bg-gray-200 rounded-full h-1.5">
-                  <div className="bg-yellow-400 h-1.5 rounded-full" style={{ width: `${pct}%` }}></div>
+                  <div
+                    className="bg-yellow-400 h-1.5 rounded-full"
+                    style={{ width: `${pct}%` }}
+                  />
                 </div>
                 <span className="w-6 text-right">{count}</span>
               </div>
@@ -189,8 +190,15 @@ export default function ReviewSection({ productSlug }) {
 
       {/* Nút viết đánh giá */}
       {user && !myReview && !showForm && (
-        <button onClick={() => { setShowForm(true); setEditingId(null); setForm({ rating: 5, comment: '', mediaList: [] }) }}
-          className="mb-4 border border-orange-500 text-orange-500 text-sm px-4 py-2 rounded hover:bg-orange-50 cursor-pointer bg-white">
+        <button
+          onClick={() => {
+            setShowForm(true)
+            setEditingId(null)
+            setForm({ rating: 5, comment: '', mediaList: [] })
+            setError('')
+          }}
+          className="mb-4 border border-orange-500 text-orange-500 text-sm px-4 py-2 rounded hover:bg-orange-50 cursor-pointer bg-white"
+        >
           ✏️ Viết đánh giá
         </button>
       )}
@@ -201,35 +209,64 @@ export default function ReviewSection({ productSlug }) {
           <h4 className="text-sm font-semibold text-gray-700 mb-3">
             {editingId ? 'Chỉnh sửa đánh giá' : 'Viết đánh giá của bạn'}
           </h4>
-          {error && <div className="bg-red-100 text-red-600 p-2 rounded text-xs mb-3">{error}</div>}
+          {error && (
+            <div className="bg-red-100 text-red-600 p-2 rounded text-xs mb-3">{error}</div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
               <label className="text-xs text-gray-500 mb-1 block">Số sao *</label>
-              <StarRating value={form.rating} onChange={v => setForm(p => ({ ...p, rating: v }))} />
+              <StarRating
+                value={form.rating}
+                onChange={v => setForm(p => ({ ...p, rating: v }))}
+              />
             </div>
             <div>
-              <label className="text-xs text-gray-500 mb-1 block">Nội dung</label>
-              <textarea value={form.comment}
+              <label className="text-xs text-gray-500 mb-1 block">
+                Nội dung
+                <span className="text-gray-400 ml-1">(không bắt buộc)</span>
+              </label>
+              {/* FIX: bỏ required — chỉ cần số sao là đủ */}
+              <textarea
+                value={form.comment}
                 onChange={e => setForm(p => ({ ...p, comment: e.target.value }))}
-                rows={3} placeholder="Chia sẻ trải nghiệm của bạn..."
-                className="w-full border border-gray-200 rounded px-3 py-2 text-sm outline-none focus:border-orange-400 resize-none" />
+                rows={3}
+                placeholder="Chia sẻ trải nghiệm của bạn... (có thể bỏ qua)"
+                className="w-full border border-gray-200 rounded px-3 py-2 text-sm outline-none focus:border-orange-400 resize-none"
+              />
             </div>
             <div>
-              <label className="text-xs text-gray-500 mb-1 block">Ảnh / Video (tùy chọn)</label>
-              <input ref={fileRef} type="file" accept="image/*,video/*" multiple
-                onChange={handleFilesUpload} className="text-xs text-gray-500" />
-              {uploading && <p className="text-xs text-orange-400 mt-1">⏳ Đang upload...</p>}
+              <label className="text-xs text-gray-500 mb-1 block">
+                Ảnh / Video
+                <span className="text-gray-400 ml-1">(không bắt buộc)</span>
+              </label>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*,video/*"
+                multiple
+                onChange={handleFilesUpload}
+                className="text-xs text-gray-500"
+              />
+              {uploading && (
+                <p className="text-xs text-orange-400 mt-1">⏳ Đang upload...</p>
+              )}
               {form.mediaList.length > 0 && (
                 <MediaPreview mediaList={form.mediaList} onRemove={removeMedia} />
               )}
             </div>
             <div className="flex gap-2">
-              <button type="submit" disabled={submitting || uploading}
-                className="bg-orange-500 hover:bg-orange-600 text-white text-sm px-4 py-2 rounded cursor-pointer border-0 disabled:opacity-50">
+              <button
+                type="submit"
+                disabled={submitting || uploading}
+                className="bg-orange-500 hover:bg-orange-600 text-white text-sm px-4 py-2 rounded cursor-pointer border-0 disabled:opacity-50"
+              >
                 {submitting ? '...' : editingId ? 'Cập nhật' : 'Gửi đánh giá'}
               </button>
-              <button type="button" onClick={() => { setShowForm(false); setEditingId(null); setError('') }}
-                className="border border-gray-300 text-gray-500 text-sm px-4 py-2 rounded hover:bg-gray-50 cursor-pointer bg-white">
+              <button
+                type="button"
+                onClick={() => { setShowForm(false); setEditingId(null); setError('') }}
+                className="border border-gray-300 text-gray-500 text-sm px-4 py-2 rounded hover:bg-gray-50 cursor-pointer bg-white"
+              >
                 Hủy
               </button>
             </div>
@@ -256,39 +293,66 @@ export default function ReviewSection({ productSlug }) {
                     <StarRating value={review.rating} readonly size="sm" />
                   </div>
                 </div>
+
                 {user && review.username === user.username && (
                   <div className="flex items-center gap-2 shrink-0">
                     {review.canEdit ? (
-                      <button onClick={() => handleEdit(review)}
-                        className="text-xs text-blue-500 hover:underline cursor-pointer bg-transparent border-0">
+                      <button
+                        onClick={() => handleEdit(review)}
+                        className="text-xs text-blue-500 hover:underline cursor-pointer bg-transparent border-0"
+                      >
                         Sửa
                       </button>
                     ) : (
                       <span className="text-xs text-gray-300">
-                        (Sửa được sau {Math.max(1, Math.ceil(30 - (Date.now() - new Date(review.updatedAt)) / 60000))} phút)                      </span>
+                        (Sửa được sau{' '}
+                        {Math.max(1, Math.ceil(30 - (Date.now() - new Date(review.updatedAt)) / 60000))}{' '}
+                        phút)
+                      </span>
                     )}
-                    <button onClick={() => handleDelete(review.id)} 
-                      className="text-xs text-red-400 hover:underline cursor-pointer bg-transparent border-0">
+                    <button
+                      onClick={() => handleDelete(review.id)}
+                      className="text-xs text-red-400 hover:underline cursor-pointer bg-transparent border-0"
+                    >
                       Xóa
                     </button>
                   </div>
                 )}
               </div>
-              {review.comment && <p className="text-sm text-gray-600 mt-1 ml-9">{review.comment}</p>}
+
+              {/* Comment — chỉ hiện nếu có */}
+              {review.comment && (
+                <p className="text-sm text-gray-600 mt-1 ml-9">{review.comment}</p>
+              )}
+
+              {/* Nếu không có comment — hiện placeholder nhỏ */}
+              {!review.comment && (
+                <p className="text-xs text-gray-300 mt-1 ml-9 italic">Không có nhận xét</p>
+              )}
+
               {review.mediaList?.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2 ml-9">
-                  {review.mediaList.map(m => (
+                  {review.mediaList.map(m =>
                     m.type === 'IMAGE' ? (
-                      <img key={m.id} src={m.url} alt=""
+                      <img
+                        key={m.id}
+                        src={m.url}
+                        alt=""
                         className="w-20 h-20 object-cover rounded border border-gray-100 cursor-pointer hover:opacity-90"
-                        onClick={() => window.open(m.url, '_blank')} />
+                        onClick={() => window.open(m.url, '_blank')}
+                      />
                     ) : (
-                      <video key={m.id} src={m.url} controls
-                        className="w-32 h-20 rounded border border-gray-100" />
+                      <video
+                        key={m.id}
+                        src={m.url}
+                        controls
+                        className="w-32 h-20 rounded border border-gray-100"
+                      />
                     )
-                  ))}
+                  )}
                 </div>
               )}
+
               <p className="text-xs text-gray-300 mt-1.5 ml-9">
                 {new Date(review.createdAt).toLocaleDateString('vi-VN')}
               </p>

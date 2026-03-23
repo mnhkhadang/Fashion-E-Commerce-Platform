@@ -43,7 +43,7 @@ public class OrderService {
     private final @Lazy PaymentService paymentService;
 
     public List<OrderResponse> getMyOrders(String email){
-        return orderRepository.findByShopOwnerEmail(email)
+        return orderRepository.findByUserEmail(email)
                 .stream()
                 .map(this::toResponse)
                 .toList();

@@ -66,8 +66,8 @@ cloudinary:
   api-secret: toCQQtRfGrqsZeTmg-kShKb6-44
 
 vnpay:
-  tmn-code: YOUR_TMN_CODE
-  hash-secret: YOUR_HASH_SECRET
+  tmn-code: RDA0RUVD
+  hash-secret: ZR1LO2OJT5DISAG3CPQUKLPTNQ9EBR50
   url: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
   return-url: http://localhost:9090/api/payments/vnpay-callback
   version: "2.1.0"

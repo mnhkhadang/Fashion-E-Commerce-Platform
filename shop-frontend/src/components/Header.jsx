@@ -62,7 +62,7 @@ export default function Header({searchQuery, onSearchChange}){
                 {/* Dropdown user */}
                 <div className='relative group'>
                   <button className='flex items-center gap-2 text-white bg-white/15 hover:bg-white/25 rounded px-3 py-2 text-xs font-semibold border-0 cursor-pointer'>
-                    👤 {user.username} ▾
+                    👤 {user.roles?.includes('ROLE_SHOP') && user.shopName ? user.shopName : user.username} ▾
                   </button>
                   <div className='absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50'>
 

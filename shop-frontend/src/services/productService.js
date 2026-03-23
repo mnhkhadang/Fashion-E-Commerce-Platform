@@ -1,10 +1,18 @@
 import api from './api'
 
 const productService = {
-  getMyProducts: () => api.get('/api/products/my'),
-  create: (data) => api.post('/api/products', data),
-  update: (id, data) => api.put(`/api/products/${id}`, data),
-  toggleActive: (id) => api.post(`/api/products/${id}/toggle`),
+  // PUBLIC
+  getAll: () => api.get('/products'),
+  getBySlug: (slug) => api.get(`/products/${slug}`),
+  search: (keyword) => api.get(`/products/search?keyword=${encodeURIComponent(keyword)}`),
+  getByCategory: (categoryName) =>
+    api.get(`/products/category?categoryName=${encodeURIComponent(categoryName)}`),
+
+  // SHOP
+  getMyProducts: () => api.get('/products/my'),
+  create: (data) => api.post('/products', data),
+  update: (id, data) => api.put(`/products/${id}`, data),
+  toggleActive: (id) => api.post(`/products/${id}/toggle`),
 }
 
 export default productService

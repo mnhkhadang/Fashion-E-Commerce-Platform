@@ -1,10 +1,16 @@
 import api from './api'
 
 const orderService = {
-  getMyOrders: () => api.get('/api/orders'),
-  getByOrderCode: (orderCode) => api.get(`/api/orders/${orderCode}`),
-  cancelOrder: (orderCode) => api.post(`/api/orders/${orderCode}/cancel`),
-  getShopOrders: () => api.get('/api/orders/shop'),  // ← thêm
+  // USER
+  getMyOrders: () => api.get('/orders'),
+  getByOrderCode: (orderCode) => api.get(`/orders/${orderCode}`),
+  cancelOrder: (orderCode, reason = 'Cancel by user') =>
+    api.post(`/orders/${orderCode}/cancel?reason=${encodeURIComponent(reason)}`),
+
+  // SHOP
+  getShopOrders: () => api.get('/orders/shop'),
+  updateStatus: (orderCode, orderStatus) =>
+    api.put(`/orders/${orderCode}/status?orderStatus=${orderStatus}`),
 }
 
 export default orderService
