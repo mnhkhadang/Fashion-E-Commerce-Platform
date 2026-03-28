@@ -26,6 +26,8 @@ export default function ShopProducts() {
   const fileInputRef = useRef(null)
   const catInputRef = useRef(null)
   const [savedMessage, setSavedMessage] = useState('')
+  const [urlInput, setUrlInput] = useState('')
+
 
   useEffect(() => {
     fetchData()
@@ -176,6 +178,23 @@ export default function ShopProducts() {
       alert('Có lỗi xảy ra')
     }
   }
+  const handleAddUrl = () => {
+    const url = urlInput.trim()
+    if (!url) return
+    if (!url.startsWith('http')) { alert('URL không hợp lệ'); return }
+
+    const isVideo = /\.(mp4|webm|ogg|mov|avi|mkv)(\?.*)?$/i.test(url)
+        || url.includes('youtube.com')
+        || url.includes('youtu.be')
+
+    const newMedia = {
+        url,
+        type: isVideo ? 'VIDEO' : 'IMAGE',
+        sortOrder: form.mediaList.length
+    }
+    setForm(prev => ({ ...prev, mediaList: [...prev.mediaList, newMedia] }))
+    setUrlInput('')
+}
 
   const filtered = products.filter(p => {
     if (filterActive === 'active') return p.active
@@ -322,15 +341,20 @@ export default function ShopProducts() {
                   <div className="flex flex-wrap gap-2">
                     {form.mediaList.map((m, idx) => (
                       <div key={`${m.url}-${idx}`} className="relative w-20 h-20 rounded-lg border border-gray-200 overflow-hidden group">
-                        <img src={m.url} alt="" className="w-full h-full object-cover" />
-                        <button
-                          onClick={() => removeMedia(idx)}
-                          className="absolute top-0 right-0 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer border-0"
-                        >
-                          ×
-                        </button>
+                          {m.type === 'VIDEO'
+                              ? <div className="w-full h-full bg-gray-900 flex flex-col items-center justify-center text-white">
+                                  <span className="text-2xl">▶</span>
+                                  <span className="text-[9px] mt-0.5 opacity-70">Video</span>
+                                </div>
+                              : <img src={m.url} alt="" className="w-full h-full object-cover"
+                                  onError={e => e.target.src = 'https://via.placeholder.com/80'} />
+                          }
+                          <button onClick={() => removeMedia(idx)}
+                              className="absolute top-0 right-0 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer border-0">
+                              ×
+                          </button>
                       </div>
-                    ))}
+                  ))}
                     <button
                       onClick={() => fileInputRef.current?.click()}
                       disabled={uploading}
@@ -350,9 +374,28 @@ export default function ShopProducts() {
                       onChange={handleUpload}
                     />
                   </div>
+                   {/* Thêm bằng URL */}
+                  <div className='flex gap-2'>
+                      <input 
+                        type="text" 
+                        value={urlInput}
+                        onChange={e => setUrlInput(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleAddUrl()}
+                        placeholder='Dán link ảnh URL vào đây...'
+                        className='flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-orange-400'
+                      />
+                      <button
+                        onClick={handleAddUrl}
+                        className="bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm px-4 py-2 rounded-lg transition cursor-pointer border-0"                
+                      >
+                        Thêm URL
+                      </button>
+                  </div>
+                  {form.mediaList.length > 0 && (
+                      <p className="text-xs text-gray-400 mt-1">{form.mediaList.length} ảnh đã thêm</p>
+                  )}
                 </div>
               </div>
-
               <div className="flex gap-2 mt-4">
                 <button
                   onClick={handleSubmit}

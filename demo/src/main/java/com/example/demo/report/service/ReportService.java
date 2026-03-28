@@ -111,6 +111,7 @@ public class ReportService {
     // ─── Admin ───────────────────────────────────────────────────────────────
 
     // Admin xem danh sách report PENDING
+    @Transactional
     public List<ReportResponse> getPendingReports() {
         return reportRepository.findByStatusOrderByCreatedAtDesc(Report.ReportStatus.PENDING)
                 .stream().map(this::toResponse).toList();

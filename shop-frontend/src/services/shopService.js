@@ -7,6 +7,8 @@ const shopService = {
   // SHOP (cần auth)
   getMyShop: () => api.get('/shop/profile'),
   updateShop: (data) => api.put('/shop/profile', data),
+  getByShop: (shopName) => api.get(`/products/shop?shopName=${encodeURIComponent(shopName)}`),
+  
 }
 
 export default shopService

@@ -43,7 +43,16 @@ export default function Login() {
       else if (roles.includes('ROLE_SHOP')) navigate('/shop')
       else navigate('/')
     } catch (err) {
-      setError(err.response?.data?.message || 'Email hoặc mật khẩu không đúng')
+      const status = err.response?.status
+      const message = err.response?.data?.message || ''
+
+      // Tài khoản bị khóa → redirect sang BlockedPage
+      if (status === 403 && message.includes('khóa')) {
+        navigate('/blocked')
+        return
+      }
+
+      setError(message || 'Email hoặc mật khẩu không đúng')
     } finally {
       setLoading(false)
     }

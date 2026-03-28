@@ -5,12 +5,15 @@ import com.example.demo.auth.dto.*;
 import com.example.demo.auth.entity.RefreshToken;
 import com.example.demo.auth.service.AuthService;
 import com.example.demo.auth.service.RefreshTokenService;
+import com.example.demo.auth.service.UnlockRequestService;
+import com.example.demo.common.exception.NotFoundException;
 import com.example.demo.config.security.JwtTokenProvider;
 import com.example.demo.user.entity.User;
 import com.example.demo.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +30,7 @@ public class AuthController {
     private final AuthService authService;
     private final RefreshTokenService refreshTokenService;
     private final UserRepository userRepository;
+    private final UnlockRequestService unlockRequestService;
 
     @PostMapping("/login")
     @Transactional
@@ -39,7 +43,11 @@ public class AuthController {
 
         // lấy user info
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new NotFoundException("User not found"));
+
+        if(!user.isEnable()){
+            throw new DisabledException("Tài khoản bạn đã bị khóa");
+        }
 
         List<String> roles = user.getRoles().stream()
                 .map(userRole -> userRole.getRole().getRole())
@@ -84,6 +92,15 @@ public class AuthController {
                 user.getUsername(),
                 roles
         ));
+    }
+
+    // User gửi yêu cầu mở khóa — không cần auth
+    @PostMapping("/unlock-request")
+    public ResponseEntity<String> unlockRequest(
+            @RequestParam String email,
+            @RequestParam String reason) {
+        unlockRequestService.createRequest(email, reason);
+        return ResponseEntity.ok("Yêu cầu mở khóa đã được gửi");
     }
 
     @PostMapping("/logout")

@@ -25,6 +25,9 @@ public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final OAuth2UserService oAuth2UserService;
+    private final OAuth2SuccessHandler oAuth2SuccessHandler;
+    private final OAuth2FailureHandler oAuth2FailureHandler;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -45,7 +48,6 @@ public class SecurityConfig {
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
-
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
@@ -57,25 +59,30 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                        session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                 )
                 .authorizeHttpRequests(auth -> auth
+                        // Auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/").permitAll()
+                        .requestMatchers("/oauth2/**").permitAll()
+                        .requestMatchers("/login/oauth2/**").permitAll()
+
+                        // Admin
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-                        // Product
+                        // Products
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/products/**").hasRole("SHOP")
                         .requestMatchers(HttpMethod.PUT, "/api/products/**").hasRole("SHOP")
 
-                        // Category
+                        // Categories
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/categories/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/categories/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/categories/**").hasRole("ADMIN")
 
-                        // Shop Registration
+                        // Shop registrations
                         .requestMatchers(HttpMethod.POST, "/api/shop-registrations").hasRole("USER")
                         .requestMatchers(HttpMethod.GET, "/api/shop-registrations/my").hasRole("USER")
                         .requestMatchers("/api/shop-registrations/**").hasRole("ADMIN")
@@ -84,7 +91,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/shop").permitAll()
                         .requestMatchers("/api/shop/**").hasRole("SHOP")
 
-                        // User profile
+                        // User
                         .requestMatchers("/api/user/**").authenticated()
 
                         // Cart
@@ -93,23 +100,22 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/cart/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/cart/**").hasAnyRole("USER", "ADMIN")
 
-                        // Location
+                        // Locations
                         .requestMatchers("/api/locations/**").permitAll()
 
-                        // Shipping Address
+                        // Shipping addresses
                         .requestMatchers("/api/shipping-addresses/**").hasAnyRole("USER", "ADMIN")
 
-                        // Order
+                        // Orders
                         .requestMatchers(HttpMethod.GET, "/api/orders/shop/**").hasRole("SHOP")
                         .requestMatchers(HttpMethod.PUT, "/api/orders/**").hasRole("SHOP")
                         .requestMatchers("/api/orders/**").hasAnyRole("USER", "ADMIN")
 
-                        // Payment
-                        // VNPay callback phải đứng TRƯỚC rule chung — first-match-wins
+                        // Payments
                         .requestMatchers(HttpMethod.GET, "/api/payments/vnpay-callback").permitAll()
                         .requestMatchers("/api/payments/**").hasAnyRole("USER", "ADMIN")
 
-                        // Returns — specific routes TRƯỚC
+                        // Returns
                         .requestMatchers(HttpMethod.GET, "/api/returns/shop").hasRole("SHOP")
                         .requestMatchers(HttpMethod.PUT, "/api/returns/**").hasRole("SHOP")
                         .requestMatchers(HttpMethod.POST, "/api/returns/**").hasAnyRole("USER", "ADMIN")
@@ -122,13 +128,25 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/reviews/**").hasAnyRole("USER", "SHOP", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/reviews/**").hasAnyRole("USER", "SHOP", "ADMIN")
 
+                        // Upload
                         .requestMatchers(HttpMethod.POST, "/api/upload").hasAnyRole("SHOP", "USER", "ADMIN")
 
-                        // Reports
+                        // Reports — specific trước, general sau
                         .requestMatchers(HttpMethod.POST, "/api/reports/**").hasAnyRole("USER", "SHOP", "ADMIN")
-                        .requestMatchers("/api/reports/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/reports").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/reports/**").hasRole("ADMIN")
+
+                        // Chat
+                        .requestMatchers("/api/chat/**").hasAnyRole("USER", "SHOP", "ADMIN")
 
                         .anyRequest().authenticated()
+                )
+                .oauth2Login(oauth2 -> oauth2
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(oAuth2UserService)
+                        )
+                        .successHandler(oAuth2SuccessHandler)
+                        .failureHandler(oAuth2FailureHandler)
                 )
                 .userDetailsService(userDetailsService)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

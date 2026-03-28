@@ -24,10 +24,10 @@ export default function Header({searchQuery, onSearchChange}){
         {/* top row */}
         <div className='flex items-center gap-3 py-3'>
           <Link to="/" className="flex items-center gap-2 shrink-0 no-underline" aria-label="ShopVN">
-            <span className='w-9 h-9 rounded-lg bg-white/20 grid place-items-center text-xl select-none'>🛍</span>
+            <span className='w-10 h-10 rounded-lg bg-white/20 grid place-items-center text-xl select-none'>🛍</span>
             <span>
-              <p className='text-white font-black text-xl leading-none tracking-tight m-0'>ShopVN</p>
-              <p className='text-white/70 text-[10px] font-semibold tracking-widest uppercase leading-none mt-0.5 m-0.5'>Mua sắm thông minh</p>
+              <p className='text-white font-black text-2xl leading-none tracking-tight m-0'>ShopVN</p>
+              <p className='text-white/70 text-[11px] font-semibold tracking-widest uppercase leading-none mt-0.5 m-0.5'>Mua sắm thông minh</p>
             </span>
           </Link>
 
@@ -85,6 +85,9 @@ export default function Header({searchQuery, onSearchChange}){
                         )}
                         <Link to="/register-shop/status" className='flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 no-underline'>
                         📋 Trạng thái đăng ký shop
+                      </Link>
+                       <Link to="/payments" className='flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 no-underline'>
+                        Lịch sử thanh toán
                       </Link>
                       </>
                     )}
@@ -144,7 +147,7 @@ export default function Header({searchQuery, onSearchChange}){
             {NAV_LINKS.map(({ label, hot}) => (
               <li key={label}>
                 <a href="#" onClick={e => e.preventDefault()}
-                  className={`block px-3 py-1 rounded-full text-[13px] whitespace-nowrap transition-colors no-underline ${hot ? 'text-white font-bold hover:bg-white/20' : 'text-white/80 font-medium hover:text-white hover:bg-white/15'}`}>
+                  className={`block px-3 py-1 rounded-full text-[16px] whitespace-nowrap transition-colors no-underline ${hot ? 'text-white font-bold hover:bg-white/20' : 'text-white/80 font-medium hover:text-white hover:bg-white/15'}`}>
                   {label}
                 </a>
               </li>

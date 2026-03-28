@@ -10,6 +10,25 @@ import cartService from '../services/cartService'
 import reviewService from '../services/reviewService'
 import { useAuth } from '../context/useAuth'
 
+// ─── MediaItem — render ảnh hoặc video tùy type
+function MediaItem({ media, className, onClick }) {
+  if (media.type === 'VIDEO') {
+    return (
+      <video
+        src={media.url}
+        className={className}
+        controls={false}
+        muted
+        loop
+        autoPlay
+        playsInline
+        onClick={onClick}
+      />
+    )
+  }
+  return <img src={media.url} alt="" className={className} onClick={onClick} />
+}
+
 export default function ProductDetail() {
   const { slug } = useParams()
   const navigate = useNavigate()
@@ -18,7 +37,7 @@ export default function ProductDetail() {
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
   const [quantity, setQuantity] = useState(1)
-  const [selectedImage, setSelectedImage] = useState(0)
+  const [selectedIndex, setSelectedIndex] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
   const [addingCart, setAddingToCart] = useState(false)
   const [message, setMessage] = useState(null)
@@ -28,9 +47,9 @@ export default function ProductDetail() {
     const fetchProduct = async () => {
       setLoading(true)
       try {
-        // FIX: dùng productService
         const res = await productService.getBySlug(slug)
         setProduct(res.data)
+        setSelectedIndex(0)
       } catch (e) {
         console.error('Lỗi khi tải sản phẩm', e.response?.status)
       } finally {
@@ -42,7 +61,6 @@ export default function ProductDetail() {
 
   useEffect(() => {
     if (!slug) return
-    // FIX: dùng reviewService
     reviewService.getProductReviews(slug)
       .then(res => setReviewSummary(res.data))
       .catch(() => {})
@@ -56,7 +74,6 @@ export default function ProductDetail() {
     }
     setAddingToCart(true)
     try {
-      // FIX: dùng cartService
       await cartService.addItem(product.slug, quantity)
       setMessage({ type: 'success', text: 'Đã thêm vào giỏ hàng!' })
       setTimeout(() => setMessage(null), 3000)
@@ -70,7 +87,6 @@ export default function ProductDetail() {
   const handleBuyNow = async () => {
     if (!user) { navigate('/login'); return }
     try {
-      // FIX: dùng cartService
       await cartService.addItem(product.slug, quantity)
       navigate('/cart')
     } catch {
@@ -79,9 +95,7 @@ export default function ProductDetail() {
   }
 
   if (loading)
-    return (
-      <LoadingSpinner fullPage searchQuery={searchQuery} onSearchChange={setSearchQuery} />
-    )
+    return <LoadingSpinner fullPage searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
   if (!product)
     return (
@@ -92,6 +106,10 @@ export default function ProductDetail() {
       </div>
     )
 
+  const mediaList = product.mediaList || []
+  const selectedMedia = mediaList[selectedIndex]
+  const isSelectedVideo = selectedMedia?.type === 'VIDEO'
+
   return (
     <div className="min-h-screen bg-gray-100 font-sans">
       <Header searchQuery={searchQuery} onSearchChange={setSearchQuery} />
@@ -99,10 +117,7 @@ export default function ProductDetail() {
       <div className="max-w-6xl mx-auto px-4 py-5">
         {/* Breadcrumb */}
         <nav className="text-xs text-gray-400 mb-4 flex items-center gap-1">
-          <button
-            onClick={() => navigate('/')}
-            className="hover:text-orange-500 cursor-pointer bg-transparent border-0 p-0"
-          >
+          <button onClick={() => navigate('/')} className="hover:text-orange-500 cursor-pointer bg-transparent border-0 p-0">
             Trang chủ
           </button>
           <span>›</span>
@@ -120,28 +135,73 @@ export default function ProductDetail() {
         <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
           <div className="flex flex-col md:flex-row gap-8">
 
-            {/* Image Block */}
+            {/* Media Block */}
             <div className="w-full md:w-96 shrink-0">
-              <div className="aspect-square rounded-lg overflow-hidden mb-3 border border-gray-100">
-                <img
-                  src={product.mediaList?.[selectedImage]?.url || 'https://picsum.photos/400/400'}
-                  alt={product.name}
-                  className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-                />
+              {/* Main media — ảnh hoặc video */}
+              <div className="aspect-square rounded-lg overflow-hidden mb-3 border border-gray-100 bg-gray-50 relative">
+                {selectedMedia ? (
+                  isSelectedVideo ? (
+                    /* Video — hiện controls đầy đủ khi click */
+                    <video
+                      key={selectedMedia.url}
+                      src={selectedMedia.url}
+                      className="w-full h-full object-cover"
+                      controls
+                      muted
+                      playsInline
+                    />
+                  ) : (
+                    <img
+                      src={selectedMedia.url}
+                      alt={product.name}
+                      className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+                    />
+                  )
+                ) : (
+                  <img
+                    src="https://picsum.photos/400/400"
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                  />
+                )}
+
+                {/* Badge VIDEO */}
+                {isSelectedVideo && (
+                  <span className="absolute top-2 left-2 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded">
+                    ▶ VIDEO
+                  </span>
+                )}
               </div>
-              {product.mediaList?.length > 1 && (
+
+              {/* Thumbnail strip */}
+              {mediaList.length > 1 && (
                 <div className="flex gap-2 overflow-x-auto pb-2">
-                  {product.mediaList.map((media, idx) => (
+                  {mediaList.map((media, idx) => (
                     <button
                       key={idx}
-                      onClick={() => setSelectedImage(idx)}
-                      className={`w-16 h-16 rounded border-2 overflow-hidden shrink-0 cursor-pointer transition-all ${
-                        selectedImage === idx
+                      onClick={() => setSelectedIndex(idx)}
+                      className={`w-16 h-16 rounded border-2 overflow-hidden shrink-0 cursor-pointer transition-all relative bg-gray-50 ${
+                        selectedIndex === idx
                           ? 'border-orange-500'
                           : 'border-gray-200 hover:border-orange-300'
                       }`}
                     >
-                      <img src={media.url} alt="" className="w-full h-full object-cover" />
+                      {media.type === 'VIDEO' ? (
+                        <>
+                          <video
+                            src={media.url}
+                            className="w-full h-full object-cover"
+                            muted
+                            playsInline
+                          />
+                          {/* Play icon overlay */}
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                            <span className="text-white text-xs">▶</span>
+                          </div>
+                        </>
+                      ) : (
+                        <img src={media.url} alt="" className="w-full h-full object-cover" />
+                      )}
                     </button>
                   ))}
                 </div>
@@ -152,7 +212,7 @@ export default function ProductDetail() {
             <div className="flex-1">
               <h1 className="text-2xl font-semibold text-gray-800 mb-2">{product.name}</h1>
 
-              {/* Rating — FIX: dùng StarRating component */}
+              {/* Rating */}
               <div className="flex items-center gap-4 text-sm text-gray-400 mb-6">
                 {reviewSummary && reviewSummary.totalReviews > 0 ? (
                   <>
@@ -160,11 +220,7 @@ export default function ProductDetail() {
                       <span className="text-orange-400 font-bold">
                         {reviewSummary.averageRating.toFixed(1)}
                       </span>
-                      <StarRating
-                        value={Math.round(reviewSummary.averageRating)}
-                        readonly
-                        size="sm"
-                      />
+                      <StarRating value={Math.round(reviewSummary.averageRating)} readonly size="sm" />
                     </span>
                     <span className="w-px h-3 bg-gray-200"></span>
                     <span>{reviewSummary.totalReviews} đánh giá</span>
@@ -207,16 +263,12 @@ export default function ProductDetail() {
                   <button
                     onClick={() => setQuantity(q => Math.max(1, q - 1))}
                     className="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-gray-100 cursor-pointer bg-white border-0 border-r border-gray-300 text-xl"
-                  >
-                    -
-                  </button>
+                  >-</button>
                   <span className="w-12 text-center text-sm font-semibold">{quantity}</span>
                   <button
                     onClick={() => setQuantity(q => Math.min(product.stock, q + 1))}
                     className="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-gray-100 cursor-pointer bg-white border-0 border-l border-gray-300 text-xl"
-                  >
-                    +
-                  </button>
+                  >+</button>
                 </div>
                 <span className="text-xs text-gray-400">{product.stock} sản phẩm sẵn có</span>
               </div>

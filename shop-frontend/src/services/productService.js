@@ -7,6 +7,8 @@ const productService = {
   search: (keyword) => api.get(`/products/search?keyword=${encodeURIComponent(keyword)}`),
   getByCategory: (categoryName) =>
     api.get(`/products/category?categoryName=${encodeURIComponent(categoryName)}`),
+  getByShop: (shopName) =>
+    api.get(`/products/shop?shopName=${encodeURIComponent(shopName)}`),
 
   // SHOP
   getMyProducts: () => api.get('/products/my'),

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/useAuth'
 import reviewService from '../services/reviewService'
 import StarRating from '../components/ui/StarRating'
+import reportService from '../services/reportService'
 import api from '../services/api'
 
 // ─── MediaPreview
@@ -40,6 +41,9 @@ export default function ReviewSection({ productSlug }) {
   const [form, setForm] = useState({ rating: 5, comment: '', mediaList: [] })
   const [uploading, setUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [reportModal, setReportModal] = useState(null) // reviewId đang report
+  const [reportReason, setReportReason] = useState('')
+  const [reporting, setReporting] = useState(false)
   const [error, setError] = useState('')
 
   const fetchReviews = async () => {
@@ -95,6 +99,21 @@ export default function ReviewSection({ productSlug }) {
         .filter((_, i) => i !== index)
         .map((m, i) => ({ ...m, sortOrder: i })),
     }))
+  }
+
+  const handleReport = async () => {
+    if (!reportReason.trim()) { alert('Vui lòng nhập lý do báo cáo'); return }
+    setReporting(true)
+    try {
+      await reportService.reportReview(reportModal, reportReason.trim())
+      setReportModal(null)
+      setReportReason('')
+      alert('Đã gửi báo cáo thành công')
+    } catch (err) {
+      alert(err.response?.data?.message || 'Có lỗi xảy ra')
+    } finally {
+      setReporting(false)
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -157,6 +176,7 @@ export default function ReviewSection({ productSlug }) {
     )
 
   return (
+    <>
     <div className="mt-8">
       <h3 className="text-base font-bold text-gray-700 mb-4">Đánh Giá Sản Phẩm</h3>
 
@@ -318,6 +338,16 @@ export default function ReviewSection({ productSlug }) {
                     </button>
                   </div>
                 )}
+                {/* Nút report — chỉ hiện cho review của người khác */}
+                {user && review.username !== user.username && (
+                  <button
+                    onClick={() => { setReportModal(review.id); setReportReason('') }}
+                    className="text-xs text-gray-300 hover:text-red-400 cursor-pointer bg-transparent border-0 transition"
+                    title="Báo cáo đánh giá này"
+                  >
+                    🚩
+                  </button>
+                )}
               </div>
 
               {/* Comment — chỉ hiện nếu có */}
@@ -361,5 +391,42 @@ export default function ReviewSection({ productSlug }) {
         </div>
       )}
     </div>
+
+    {/* Modal báo cáo review */}
+      {reportModal && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+          onClick={e => { if (e.target === e.currentTarget) setReportModal(null) }}
+        >
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
+            <h3 className="font-semibold text-gray-700 mb-1">Báo cáo đánh giá</h3>
+            <p className="text-xs text-gray-400 mb-3">Vui lòng cho chúng tôi biết lý do báo cáo</p>
+            <label className="text-xs text-gray-500 mb-1 block">Lý do *</label>
+            <textarea
+              value={reportReason}
+              onChange={e => setReportReason(e.target.value)}
+              rows={3}
+              placeholder="Ví dụ: Đánh giá không liên quan, spam, nội dung không phù hợp..."
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-orange-400 resize-none"
+            />
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={handleReport}
+                disabled={reporting}
+                className="bg-red-500 hover:bg-red-600 text-white text-sm px-5 py-2 rounded-lg cursor-pointer border-0 disabled:opacity-50"
+              >
+                {reporting ? '...' : 'Gửi báo cáo'}
+              </button>
+              <button
+                onClick={() => setReportModal(null)}
+                className="border border-gray-300 text-gray-500 text-sm px-5 py-2 rounded-lg hover:bg-gray-50 cursor-pointer bg-white"
+              >
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
