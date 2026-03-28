@@ -79,4 +79,11 @@ public class ProductController {
     public ResponseEntity<ProductResponse> getBySlug(@PathVariable  String slug){
         return ResponseEntity.ok(productService.getBySlug(slug));
     }
+
+    // Lấy sản phẩm theo tên shop (public)
+
+    @GetMapping("/shop")
+    public ResponseEntity<List<ProductResponse>> getByShop(@RequestParam String shopName) {
+        return ResponseEntity.ok(productService.getByShop(shopName));
+    }
 }

@@ -40,20 +40,19 @@ public class ShopRegistrationController {
     }
 
     //admin lấy danh sách tất cả đơn
-
     @GetMapping
     public ResponseEntity<List<ShopRegistrationResponse>> getAllRegistration() {
         return ResponseEntity.ok(shopRegistrationService.getAllRegistration());
     }
 
     //admin duyệt
-    @PostMapping("{id}/approve")
+    @PutMapping("{id}/approve")
     public  ResponseEntity<ShopRegistrationResponse> approve(@PathVariable UUID id){
         return ResponseEntity.ok(shopRegistrationService.approve(id));
     }
 
     //admin từ chối đơn
-    @PostMapping("{id}/reject")
+    @PutMapping("{id}/reject")
     public ResponseEntity<ShopRegistrationResponse> reject(@PathVariable UUID id,
                                                            @RequestParam String reason){
         return  ResponseEntity.ok(shopRegistrationService.reject(id, reason));

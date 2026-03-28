@@ -31,14 +31,17 @@ export default function ResetPassword() {
     }
     setLoading(true)
     try {
-      await api.post('/api/auth/reset-password', {
+      // FIX: bỏ prefix /api
+      await api.post('/auth/reset-password', {
         token,
         newPassword: form.newPassword,
       })
       setSuccess(true)
       setTimeout(() => navigate('/login'), 3000)
     } catch (err) {
-      setError(err.response?.data || 'Token không hợp lệ hoặc đã hết hạn')
+      setError(
+        err.response?.data?.message || err.response?.data || 'Token không hợp lệ hoặc đã hết hạn'
+      )
     } finally {
       setLoading(false)
     }
@@ -70,7 +73,7 @@ export default function ResetPassword() {
             {error && (
               <div className="bg-red-100 text-red-600 p-3 rounded-lg mb-4 text-sm">{error}</div>
             )}
-            {!token ? null : (
+            {token && (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu mới</label>
@@ -94,8 +97,11 @@ export default function ResetPassword() {
                     required
                   />
                 </div>
-                <button type="submit" disabled={loading}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-lg transition border-0 cursor-pointer disabled:opacity-50">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-lg transition border-0 cursor-pointer disabled:opacity-50"
+                >
                   {loading ? 'Đang lưu...' : 'Đặt lại mật khẩu'}
                 </button>
               </form>
@@ -110,4 +116,4 @@ export default function ResetPassword() {
       </div>
     </div>
   )
-}
+} 

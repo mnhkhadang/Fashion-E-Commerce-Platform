@@ -19,4 +19,7 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     Double findAverageRatingByProductSlug(@Param("productSlug") String productSlug);
 
     long countByProductSlug(String productSlug);
+
+
+
 }

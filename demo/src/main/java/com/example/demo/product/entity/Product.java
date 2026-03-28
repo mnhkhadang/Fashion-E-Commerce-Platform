@@ -49,6 +49,12 @@ public class Product {
     @Column(nullable = false)
     private int sold=0;
 
+    @Column(nullable = false)
+    private double averageRating = 0.0;
+
+    @Column(nullable = false)
+    private int reviewCount = 0;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shop_id", nullable = false)
     private Shop shop;

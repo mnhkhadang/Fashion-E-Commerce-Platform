@@ -18,24 +18,29 @@ export default function CheckoutAddressSection({ addresses, setAddresses, select
     const [districts, setDistricts] = useState([])
     const [submitting, setSubmitting] = useState(false)
 
+    // Load provinces 1 lần, cache lại trong state
+    const loadProvinces = async () => {
+        if (provinces.length > 0) return provinces
+        // FIX: getProvinces() — có chữ s, khớp với locationService
+        const res = await locationService.getProvinces()
+        setProvinces(res.data)
+        return res.data
+    }
+
     const openAddForm = async () => {
         setEditingId(null)
         setForm(EMPTY_FORM)
         setDistricts([])
-        if (provinces.length === 0) {
-            const res = await locationService.getProvince()
-            setProvinces(res.data)
-        }
+        await loadProvinces()
         setShowForm(true)
     }
 
     const openEditForm = async (address) => {
-        if (provinces.length === 0) {
-            const res = await locationService.getProvince()
-            setProvinces(res.data)
-        }
-        const province = provinces.find(p => p.name === address.provinceName)
+        const loadedProvinces = await loadProvinces()
+
+        const province = loadedProvinces.find(p => p.name === address.provinceName)
         const provinceCode = province?.code || ''
+
         let districtCode = ''
         if (provinceCode) {
             const res = await locationService.getDistricts(provinceCode)
@@ -43,10 +48,14 @@ export default function CheckoutAddressSection({ addresses, setAddresses, select
             const district = res.data.find(d => d.name === address.districtName)
             districtCode = district?.code || ''
         }
+
         setForm({
-            fullName: address.fullName, phone: address.phone,
+            fullName: address.fullName,
+            phone: address.phone,
             streetAddress: address.streetAddress,
-            provinceCode, districtCode, isDefault: address.isDefault,
+            provinceCode,
+            districtCode,
+            isDefault: address.isDefault,
         })
         setEditingId(address.id)
         setShowForm(true)
@@ -56,7 +65,7 @@ export default function CheckoutAddressSection({ addresses, setAddresses, select
         setForm(prev => ({
             ...prev,
             [field]: value,
-            ...(field === 'provinceCode' ? { districtCode: '' } : {})
+            ...(field === 'provinceCode' ? { districtCode: '' } : {}),
         }))
         if (field === 'provinceCode' && value) {
             const res = await locationService.getDistricts(value)
@@ -148,7 +157,9 @@ export default function CheckoutAddressSection({ addresses, setAddresses, select
                                 <p className="text-sm font-semibold text-gray-700">
                                     {address.fullName} | {address.phone}
                                     {address.isDefault && (
-                                        <span className="ml-2 text-[10px] border border-orange-500 text-orange-500 px-1.5 py-0.5 rounded">Mặc định</span>
+                                        <span className="ml-2 text-[10px] border border-orange-500 text-orange-500 px-1.5 py-0.5 rounded">
+                                            Mặc định
+                                        </span>
                                     )}
                                 </p>
                                 <p className="text-xs text-gray-500 mt-0.5">

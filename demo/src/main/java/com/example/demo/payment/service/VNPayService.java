@@ -39,8 +39,7 @@ public class VNPayService {
         long amount = payment.getTotalAmount()
                 .multiply(java.math.BigDecimal.valueOf(100))
                 .longValue();
-        String createDate = new SimpleDateFormat("yyyyMMdd")
-                .format(new Date());
+        String createDate = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
         // Dùng TreeMap để params tự động sort theo alphabet
         // VNPay yêu cầu params phải sort trước khi hash
 
@@ -87,7 +86,7 @@ public class VNPayService {
             return false;
         }
         // Bỏ hash fields ra trước khi tính lại
-        Map<String, String> paramsToVerify = new TreeMap<>();
+        Map<String, String> paramsToVerify = new TreeMap<>(params);
         paramsToVerify.remove("vnp_SecureHash");
         paramsToVerify.remove("vnp_SecureHashType");
 

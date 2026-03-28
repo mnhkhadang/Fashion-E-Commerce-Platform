@@ -3,6 +3,8 @@ package com.example.demo.admin.controller;
 import com.example.demo.admin.dto.AssignRoleRequest;
 import com.example.demo.admin.dto.UserResponse;
 import com.example.demo.admin.service.AdminService;
+import com.example.demo.auth.entity.UnlockRequest;
+import com.example.demo.auth.service.UnlockRequestService;
 import com.example.demo.shop.dto.ShopResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +18,7 @@ import java.util.List;
 public class AdminController {
 
     private final AdminService adminService;
-
+    private final UnlockRequestService unlockRequestService;
     //lấy danh sách user
     @GetMapping("/users")
     public ResponseEntity<List<UserResponse>> getAllUsers(){
@@ -61,4 +63,26 @@ public class AdminController {
     public ResponseEntity<List<ShopResponse>> getAllShop() {
         return ResponseEntity.ok(adminService.getAllShops());
     }
+
+    // Admin xem danh sách yêu cầu mở khóa
+    @GetMapping("/unlock-requests")
+    public ResponseEntity<List<UnlockRequest>> getUnlockRequests() {
+        return ResponseEntity.ok(unlockRequestService.getPendingRequests());
+    }
+
+    // Admin approve
+    @PostMapping("/unlock-requests/{id}/approve")
+    public ResponseEntity<String> approveUnlock(@PathVariable Long id) {
+        unlockRequestService.approve(id);
+        return ResponseEntity.ok("Đã mở khóa tài khoản");
+    }
+
+    // Admin reject
+    @PostMapping("/unlock-requests/{id}/reject")
+    public ResponseEntity<String> rejectUnlock(@PathVariable Long id) {
+        unlockRequestService.reject(id);
+        return ResponseEntity.ok("Đã từ chối yêu cầu");
+    }
+
+
 }

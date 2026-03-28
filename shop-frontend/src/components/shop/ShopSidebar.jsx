@@ -17,7 +17,7 @@ export default function ShopSidebar() {
                     <Link
                         key={item.label}
                         to={item.link}
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-base font-medium transition no-underline ${
+                        className={`flex items-center gap-3 px-3 py-5 rounded-lg text-base font-medium transition no-underline ${
                             location.pathname === item.link
                                 ? 'bg-orange-50 text-orange-500'
                                 : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'

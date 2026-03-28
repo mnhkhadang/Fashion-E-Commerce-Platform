@@ -40,6 +40,9 @@ public class Shop {
     @Column
     private String avatar;
 
+    @Column
+    private int warningCount = 0;
+
     @Column(nullable = false)
     private boolean active = true;
 

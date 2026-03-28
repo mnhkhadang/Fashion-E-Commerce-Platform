@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import api from '../services/api'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 import Banner from '../components/home/Banner'
 import CategorySection from '../components/home/CategorySection'
 import ProductSuggestion from '../components/home/ProductSuggestion'
+import productService from '../services/productService'
+import categoryService from '../services/categoryService'
 
 export default function Home() {
   const [products, setProducts] = useState([])
@@ -18,8 +18,9 @@ export default function Home() {
     const fetchData = async () => {
       try {
         const [productsRes, categoriesRes] = await Promise.all([
-          api.get('/api/products'),
-          api.get('/api/categories/tree'),  // ← dùng /api/categories bình thường
+          productService.getAll(),
+          // FIX: dùng getAll() — hiện phẳng tất cả category (cả parent lẫn child)
+          categoryService.getAll(),
         ])
         setProducts(productsRes.data)
         setCategories(categoriesRes.data)
@@ -35,7 +36,7 @@ export default function Home() {
   const fetchByCategory = async (categoryName) => {
     setLoading(true)
     try {
-      const res = await api.get(`/api/products/category?categoryName=${encodeURIComponent(categoryName)}`)  // ← fix URL
+      const res = await productService.getByCategory(categoryName)
       setProducts(res.data)
       setSelectedCategory(categoryName)
     } catch {
@@ -48,11 +49,11 @@ export default function Home() {
   const fetchAll = async () => {
     setLoading(true)
     try {
-      const res = await api.get('/api/products')
+      const res = await productService.getAll()
       setProducts(res.data)
       setSelectedCategory(null)
     } catch {
-      console.error('Lỗi')
+      console.error('Lỗi khi tải sản phẩm')
     } finally {
       setLoading(false)
     }
@@ -63,6 +64,7 @@ export default function Home() {
       <Header searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       <Banner />
       <main className="max-w-6xl mx-auto px-4 py-5">
+        {/* CategorySection nhận getAll() — hiện phẳng tất cả */}
         <CategorySection
           categories={categories}
           selectedCategory={selectedCategory}

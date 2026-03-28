@@ -1,0 +1,8 @@
+CREATE TABLE unlock_requests (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) NOT NULL,
+    reason VARCHAR(1000) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    created_at DATETIME NOT NULL,
+    reviewed_at DATETIME
+);

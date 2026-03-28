@@ -164,6 +164,14 @@ public class ProductService {
                 .toList();
     }
 
+    @Transactional
+    public List<ProductResponse> getByShop(String shopName) {
+        return productRepository.findByShopNameAndActiveTrue(shopName)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
 
     private String generateSlug(String name, UUID id){
         String bassSlug = name.toLowerCase()
