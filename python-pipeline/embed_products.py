@@ -2,7 +2,7 @@
 embed_products.py — chạy 1 lần để:
 1. Extract attributes từ product descriptions bằng OpenRouter (free)
 2. Insert vào bảng product_attributes (MySQL)
-3. Generate embeddings bằng HuggingFace API (768 dims) -> upsert lên Pinecone
+3. Generate embeddings bằng Voyage AI (1024 dims) -> upsert lên Pinecone
 
 Requirements:
     pip install pinecone mysql-connector-python python-dotenv requests
@@ -19,9 +19,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ===== Setup clients =====
+# ===== Debug: kiểm tra key load được không =====
 openrouter_key = os.getenv("OPENROUTER_API_KEY")
-hf_key = os.getenv("HF_API_KEY")
+voyage_key = os.getenv("VOYAGE_API_KEY")
+print(f"OPENROUTER KEY loaded: {'YES ✓' if openrouter_key else 'NO ✗ — kiểm tra .env'}")
+print(f"VOYAGE KEY loaded:     {'YES ✓' if voyage_key else 'NO ✗ — kiểm tra .env'}")
+print(f"PINECONE KEY loaded:   {'YES ✓' if os.getenv('PINECONE_API_KEY') else 'NO ✗'}")
+
+# ===== Setup clients =====
 pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
 index = pc.Index(host=os.getenv("PINECONE_INDEX_HOST"))
 
@@ -52,12 +57,12 @@ else:
     print(f"Found {len(products)} products to embed")
 
 # ===== Config =====
-# 768 dims — khớp với Pinecone index
-HF_MODEL = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
-HF_API_URL = f"https://router.huggingface.co/hf-inference/models/{HF_MODEL}/pipeline/feature-extraction"
-
 OPENROUTER_MODELS = [
-    "openrouter/free",
+    "openai/gpt-oss-120b:free",
+    "google/gemma-4-31b-it:free",
+    "qwen/qwen3-next-80b-a3b-instruct:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
+    
 ]
 
 
@@ -78,6 +83,7 @@ Mo ta: {description or 'Khong co mo ta'}"""
     last_error = None
 
     for model in OPENROUTER_MODELS:
+        print(f"  Trying model: {model}")
         for attempt in range(5):
             try:
                 res = requests.post(
@@ -97,8 +103,13 @@ Mo ta: {description or 'Khong co mo ta'}"""
                     timeout=30
                 )
 
+                if res.status_code == 401:
+                    print(f"  401 Unauthorized — API key sai hoặc hết hạn!")
+                    print(f"  Response: {res.text[:200]}")
+                    raise Exception("Invalid API key")
+
                 if res.status_code == 429:
-                    wait = 30 * (attempt + 1)
+                    wait = 10 * (attempt + 1)
                     print(f"  Rate limited ({model}), waiting {wait}s... (attempt {attempt+1}/5)")
                     time.sleep(wait)
                     last_error = f"429 from {model}"
@@ -145,51 +156,38 @@ Mo ta: {description or 'Khong co mo ta'}"""
                 last_error = e
                 break
 
-        if last_error:
-            print(f"  Switching from {model}...")
-            time.sleep(5)
-            continue
+        print(f"  Switching from {model}...")
+        time.sleep(5)
 
     raise Exception(f"All models failed: {last_error}")
 
 
-# ===== Helper: Embed text (768 dims) =====
+# ===== Helper: Embed text (1024 dims - Voyage AI) =====
 def get_embedding(text: str) -> list:
     for attempt in range(3):
         try:
-            headers = {"Content-Type": "application/json"}
-            if hf_key:
-                headers["Authorization"] = f"Bearer {hf_key}"
-
             res = requests.post(
-                HF_API_URL,
-                headers=headers,
-                json={"inputs": text},
-                timeout=60
+                "https://api.voyageai.com/v1/embeddings",
+                headers={
+                    "Authorization": f"Bearer {voyage_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "voyage-3",  # 1024 dims — khớp Pinecone index
+                    "input": [text]
+                },
+                timeout=30
             )
 
-            if res.status_code == 503:
-                print(f"  HF model loading, waiting 20s...")
-                time.sleep(20)
+            if res.status_code == 429:
+                print(f"  Voyage rate limited, waiting 10s...")
+                time.sleep(10)
                 continue
 
             if res.status_code != 200:
-                raise Exception(f"HF API error: {res.status_code} {res.text[:150]}")
+                raise Exception(f"Voyage API error: {res.status_code} {res.text[:150]}")
 
-            result = res.json()
-
-            if isinstance(result, list):
-                if len(result) > 0 and isinstance(result[0], list):
-                    if isinstance(result[0][0], list):
-                        # [[[tokens, dims]]] → mean pool
-                        tokens = result[0]
-                        dims = len(tokens[0])
-                        return [sum(t[i] for t in tokens) / len(tokens)
-                                for i in range(dims)]
-                    return result[0]  # [[embedding]]
-                return result  # [embedding]
-
-            raise Exception(f"Unexpected HF format: {type(result)}")
+            return res.json()["data"][0]["embedding"]
 
         except Exception as e:
             if attempt < 2:
@@ -235,7 +233,7 @@ for i, product in enumerate(products):
         ))
         conn.commit()
 
-        # 3. Generate embedding (768 dims)
+        # 3. Generate embedding (1024 dims - Voyage AI)
         embed_text = (
             f"{name}. {category}. "
             f"{attrs.get('ai_summary', '')}. "
@@ -257,12 +255,12 @@ for i, product in enumerate(products):
         }])
 
         success_count += 1
-        print(f"  OK: {attrs.get('ai_summary', '')[:60]}")
+        print(f"  ✓ OK: {attrs.get('ai_summary', '')[:60]}")
         time.sleep(3)
 
     except Exception as e:
         error_count += 1
-        print(f"  FAILED: {e}")
+        print(f"  ✗ FAILED: {e}")
         conn.rollback()
         continue
 

@@ -24,7 +24,7 @@ public class PineconeClient {
     private String indexHost;  // vd: https://xxx.svc.environment.pinecone.io
 
     private final RestTemplate restTemplate;
-    private final HuggingFaceEmbeddingClient embeddingClient;
+    private final VoyageEmbeddingClient embeddingClient;
 
     // Query Pinecone, trả về top-K product IDs liên quan nhất
     public List<UUID> findSimilarProductIds(String query, int topK){

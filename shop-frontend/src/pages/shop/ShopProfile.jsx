@@ -59,7 +59,7 @@ export default function ShopProfile() {
     <div className="min-h-screen bg-gray-50 flex">
       <ShopSidebar />
       <div className="flex-1 overflow-auto">
-        <div className="max-w-7xl mx-auto px-8 py-8">
+        <div className="max-w-[1600px] mx-auto px-10 py-10">
           <h2 className="text-3xl font-extrabold text-gray-800 mb-8">Thiết Lập Hồ Sơ</h2>
 
           <div className="bg-white rounded-2xl shadow-md p-8 mb-8 border border-gray-100">

@@ -34,6 +34,7 @@ import AdminShops from './pages/admin/AdminShops'
 import AdminRegistrations from './pages/admin/AdminRegistrations'
 import AdminUnlockRequests from './pages/admin/AdminUnlockRequests'
 import AdminReports from './pages/admin/AdminReports'
+import AdminCategories from './pages/admin/AdminCategories'
 
 // FIX: dùng AiChatWidget — floating button, không cần route riêng
 import AiChatWidget from './components/AiChatWidget'
@@ -195,6 +196,9 @@ export default function App() {
         } />
         <Route path="/admin/reports" element={
           <ProtectedRoute roles={['ROLE_ADMIN']}><AdminReports /></ProtectedRoute>
+        } />
+        <Route path="/admin/categories" element={
+          <ProtectedRoute roles={['ROLE_ADMIN']}><AdminCategories /></ProtectedRoute>
         } />
 
         {/* Fallback */}

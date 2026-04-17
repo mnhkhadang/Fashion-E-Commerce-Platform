@@ -38,7 +38,7 @@ public class UserPrincipal implements UserDetails {
                 .map(role -> new SimpleGrantedAuthority(role.getRole()))
                 .collect(Collectors.toList());
 
-        System.out.println("Authorities: " + authorities);
+        // System.out.println("Authorities: " + authorities);
         return authorities;
     }
 
