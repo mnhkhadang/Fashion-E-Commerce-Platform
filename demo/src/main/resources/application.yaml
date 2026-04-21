@@ -45,19 +45,22 @@ spring:
             enable: true
   security:
     oauth2:
+      spring:
+  security:
+    oauth2:
       client:
         registration:
           google:
-            client-id: 181934678225-8v0p6a1jmir30b9394fhnrohbiu71eek.apps.googleusercontent.com
-            client-secret: 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
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
             scope:
               - email
               - profile
             redirect-uri: "{baseUrl}/login/oauth2/code/google"
 
           facebook:
-            client-id: 1264921768477871
-            client-secret: 55228be8aa48f10335f9006f35f17069
+            client-id: ${FACEBOOK_CLIENT_ID}
+            client-secret: ${FACEBOOK_CLIENT_SECRET}
             scope:
               - email
               - public_profile
@@ -85,7 +88,7 @@ server:
       force: true
     session:
       cookie:
-        same-site: lax    # ← thêm
+        same-site: lax # ← thêm
         secure: false
 
 logging:
@@ -110,13 +113,13 @@ vnpay:
 
 ai:
   pinecone:
-    api-key: pcsk_5PYocA_TdJ7LYuQHHvAR1fhDafh79VGz4LbAkhZp14x5DDTct19vsL2GTkkTSLt6GGTiWJ         # ← copy từ .env PINECONE_API_KEY
+    api-key: ${PINECONE_API_KEY}
     index-host: https://my-index-p9os2w5.svc.aped-4627-b74a.pinecone.io
   openrouter:
-    api-key: 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     # ← copy từ .env OPENROUTER_API_KEY
+    api-key: ${OPENROUTER_API_KEY}
     model: openai/gpt-oss-120b
   voyage:
-    api-key: pa-SxxHjUXYLfh-jp6g-pMcGP2T59Yrt-s9vytNQVfqln3              # ← copy từ .env HF_API_KEY
+    api-key: ${HF_API_KEY}
 app:
   frontend-url: http://localhost:5173
   oauth2:
