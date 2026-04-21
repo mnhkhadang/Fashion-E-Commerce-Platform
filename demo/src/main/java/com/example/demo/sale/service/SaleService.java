@@ -60,6 +60,7 @@ public class SaleService {
     }
 
     /** Admin xem tất cả sale PLATFORM */
+    @Transactional
     public List<SaleResponse> getAllPlatformSales () {
         return saleRepository.findByCreatedByOrderByCreatedAtDesc(Sale.SaleCreatedBy.PLATFORM)
                 .stream()
@@ -104,6 +105,7 @@ public class SaleService {
         return toResponse(sale);
     }
     /** Shop xem sale của mình */
+    @Transactional
     public List<SaleResponse> getMySales(String email) {
         Shop shop = shopRepository.findByOwner_Email(email)
                 .orElseThrow(() -> new NotFoundException("Shop not found"));
@@ -112,6 +114,7 @@ public class SaleService {
     }
 
     /** Shop xem danh sách sale PLATFORM đang ACTIVE để opt-in */
+    @Transactional
     public List<SaleResponse> getActivePlatformSales() {
         return saleRepository
                 .findByCreatedByAndStatus(Sale.SaleCreatedBy.PLATFORM, Sale.SaleStatus.ACTIVE)
