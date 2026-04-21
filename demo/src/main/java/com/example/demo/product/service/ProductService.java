@@ -206,11 +206,15 @@ public class ProductService {
         BigDecimal salePrice = null;
         Integer discountPercent = null;
         String saleSource = null;
+        Long saleId = null;     // ← thêm
+        String saleName = null;
 
         if (activeSale.isPresent()) {
             Sale sale = activeSale.get().getSale();
             discountPercent = sale.getDiscountPercent();
             saleSource = sale.getCreatedBy().name(); // "PLATFORM" | "SHOP"
+            saleId = sale.getId();       // ← thêm
+            saleName = sale.getName();   // ← thêm
             salePrice = product.getPrice()
                     .multiply(BigDecimal.valueOf(100 - discountPercent))
                     .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
@@ -237,8 +241,10 @@ public class ProductService {
                 product.getShop().getName(),
                 product.getCategory().getName(),
                 mediaResponse,
-                salePrice,       // ← thêm mới
-                discountPercent, // ← thêm mới
+                saleId,          // ← thêm
+                saleName,        // ← thêm
+                salePrice,
+                discountPercent,
                 saleSource
         );
     }
