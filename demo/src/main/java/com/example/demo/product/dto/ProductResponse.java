@@ -24,6 +24,10 @@ public class ProductResponse {
     private String categoryName;
     private List<MediaResponse> mediaList;
 
+    private BigDecimal salePrice;
+    private Integer discountPercent;
+    private String saleSource;
+
     @Getter
     @AllArgsConstructor
     public static class MediaResponse{

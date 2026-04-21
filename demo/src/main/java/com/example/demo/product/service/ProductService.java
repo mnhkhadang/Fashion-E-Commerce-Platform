@@ -7,6 +7,9 @@ import com.example.demo.product.dto.ProductResponse;
 import com.example.demo.product.entity.Product;
 import com.example.demo.product.entity.ProductMedia;
 import com.example.demo.product.repository.ProductRepository;
+import com.example.demo.sale.entity.Sale;
+import com.example.demo.sale.entity.SaleProduct;
+import com.example.demo.sale.repository.SaleProductRepository;
 import com.example.demo.shop.entity.Shop;
 import com.example.demo.shop.repository.ShopRepository;
 import jakarta.persistence.Table;
@@ -14,7 +17,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -25,6 +32,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final ShopRepository shopRepository;
     private final CategoryRepository categoryRepository;
+    private final SaleProductRepository saleProductRepository;
 
     //Shop đăng bán sản phẩm
     @Transactional
@@ -191,6 +199,23 @@ public class ProductService {
 
     private ProductResponse toResponse(Product product){
 
+        // Query sale ACTIVE hiện tại của product
+        Optional<SaleProduct> activeSale = saleProductRepository
+                .findActiveByProductId(product.getId(), LocalDateTime.now());
+
+        BigDecimal salePrice = null;
+        Integer discountPercent = null;
+        String saleSource = null;
+
+        if (activeSale.isPresent()) {
+            Sale sale = activeSale.get().getSale();
+            discountPercent = sale.getDiscountPercent();
+            saleSource = sale.getCreatedBy().name(); // "PLATFORM" | "SHOP"
+            salePrice = product.getPrice()
+                    .multiply(BigDecimal.valueOf(100 - discountPercent))
+                    .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+        }
+
         List<ProductResponse.MediaResponse> mediaResponse = product.getMediaList() == null
                 ? List.of()
                 : product.getMediaList().stream()
@@ -211,7 +236,10 @@ public class ProductService {
                 product.getSold(),
                 product.getShop().getName(),
                 product.getCategory().getName(),
-                mediaResponse
+                mediaResponse,
+                salePrice,       // ← thêm mới
+                discountPercent, // ← thêm mới
+                saleSource
         );
     }
 }

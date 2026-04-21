@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react' // Đã thêm React để sửa lỗi
 import AdminSidebar from '../../components/admin/AdminSidebar'
 import adminService from '../../services/adminService'
 
@@ -19,6 +19,7 @@ export default function AdminUsers() {
   }, [])
 
   const handleToggle = async (email) => {
+    if (!window.confirm(`Thay đổi trạng thái tài khoản ${email}?`)) return
     setProcessing(email + '_toggle')
     try {
       await adminService.toggleUser(email)
@@ -26,7 +27,7 @@ export default function AdminUsers() {
         prev.map(u => u.email === email ? { ...u, enable: !u.enable } : u)
       )
     } catch {
-      alert('Có lỗi xảy ra')
+      alert('Có lỗi xảy ra khi cập nhật trạng thái')
     } finally {
       setProcessing(null)
     }
@@ -38,7 +39,6 @@ export default function AdminUsers() {
       await adminService.assignRole(email, role)
       setUsers(prev =>
         prev.map(u =>
-          // FIX: dùng u.roles (có s) — khớp với BE UserResponse
           u.email === email ? { ...u, roles: [...(u.roles || []), role] } : u
         )
       )
@@ -55,7 +55,6 @@ export default function AdminUsers() {
       await adminService.removeRole(email, role)
       setUsers(prev =>
         prev.map(u =>
-          // FIX: dùng u.roles (có s)
           u.email === email ? { ...u, roles: (u.roles || []).filter(r => r !== role) } : u
         )
       )
@@ -72,148 +71,168 @@ export default function AdminUsers() {
   )
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div className="flex min-h-screen bg-[#f8fafc] font-sans text-slate-900">
       <AdminSidebar />
-      <div className="flex-1 px-6 py-5">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-gray-700">Quản lý người dùng</h2>
-          <span className="text-sm text-gray-400">{users.length} người dùng</span>
-        </div>
-
-        <div className="mb-4">
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Tìm theo email hoặc tên..."
-            className="w-full max-w-sm border border-gray-200 rounded px-3 py-2 text-sm outline-none focus:border-orange-400"
-          />
-        </div>
-
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <div className="w-10 h-10 rounded-full border-4 border-gray-200 border-t-orange-500 animate-spin"></div>
+      <div className="flex-1 overflow-auto">
+        <div className="max-w-[1600px] mx-auto px-10 py-10">
+          
+          {/* Header Section */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+            <div>
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[3px] mb-1">Cơ sở dữ liệu định danh</p>
+              <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">Quản Lý Người Dùng</h2>
+            </div>
+            <div className="bg-white px-6 py-3 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
+                <div className="text-right border-r border-slate-100 pr-4">
+                    <p className="text-[9px] font-black text-slate-300 uppercase">Tổng tài khoản</p>
+                    <p className="text-xl font-black text-slate-800 tracking-tighter">{users.length}</p>
+                </div>
+                <div>
+                    <p className="text-[9px] font-black text-rose-400 uppercase">Đang khóa</p>
+                    <p className="text-xl font-black text-rose-500 tracking-tighter">{users.filter(u => !u.enable).length}</p>
+                </div>
+            </div>
           </div>
-        ) : (
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500">Người dùng</th>
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500">Roles</th>
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500">Trạng thái</th>
-                  <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(user => (
-                  <>
-                    <tr key={user.email} className="border-b border-gray-50 hover:bg-gray-50 transition">
-                      <td className="px-5 py-3">
-                        <p className="font-medium text-gray-700">{user.username}</p>
-                        <p className="text-xs text-gray-400">{user.email}</p>
-                      </td>
-                      <td className="px-5 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {/* FIX: dùng user.roles (có s), thêm optional chaining */}
-                          {user.roles?.map(r => (
-                            <span
-                              key={r}
-                              className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded"
-                            >
-                              {r.replace('ROLE_', '')}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          user.enable
-                            ? 'bg-green-100 text-green-600'
-                            : 'bg-red-100 text-red-600'
-                        }`}>
-                          {user.enable ? 'Hoạt động' : 'Bị khóa'}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => setExpandedUser(
-                              expandedUser === user.email ? null : user.email
-                            )}
-                            className="text-xs border border-blue-300 text-blue-500 px-2.5 py-1 rounded hover:bg-blue-50 transition cursor-pointer bg-white"
-                          >
-                            {expandedUser === user.email ? 'Đóng' : 'Roles'}
-                          </button>
-                          <button
-                            onClick={() => handleToggle(user.email)}
-                            disabled={processing === user.email + '_toggle'}
-                            className={`text-xs border px-2.5 py-1 rounded transition cursor-pointer bg-white disabled:opacity-50 ${
-                              user.enable
-                                ? 'border-red-300 text-red-400 hover:bg-red-50'
-                                : 'border-green-300 text-green-500 hover:bg-green-50'
-                            }`}
-                          >
-                            {processing === user.email + '_toggle'
-                              ? '...'
-                              : user.enable ? 'Khóa' : 'Mở khóa'}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
 
-                    {/* Expanded role manager */}
-                    {expandedUser === user.email && (
-                      <tr key={user.email + '_roles'} className="bg-blue-50">
-                        <td colSpan={4} className="px-5 py-3">
-                          <p className="text-xs font-semibold text-gray-600 mb-2">
-                            Quản lý role cho:{' '}
-                            <span className="text-blue-600">{user.email}</span>
-                          </p>
-                          <div className="flex flex-wrap gap-2">
-                            {AVAILABLE_ROLES.map(role => {
-                              // FIX: dùng user.roles (có s)
-                              const hasRole = user.roles?.includes(role)
-                              const isProcessing = processing === user.email + '_' + role
-                              return (
-                                <button
-                                  key={role}
-                                  onClick={() =>
-                                    hasRole
-                                      ? handleRemoveRole(user.email, role)
-                                      : handleAssignRole(user.email, role)
-                                  }
-                                  disabled={isProcessing}
-                                  className={`text-xs px-3 py-1.5 rounded border transition cursor-pointer disabled:opacity-50 ${
-                                    hasRole
-                                      ? 'bg-blue-500 text-white border-blue-500 hover:bg-red-500 hover:border-red-500'
-                                      : 'bg-white text-gray-500 border-gray-300 hover:border-blue-400 hover:text-blue-500'
-                                  }`}
-                                >
-                                  {isProcessing
-                                    ? '...'
-                                    : hasRole
-                                    ? `✓ ${role.replace('ROLE_', '')}`
-                                    : `+ ${role.replace('ROLE_', '')}`}
-                                </button>
-                              )
-                            })}
+          {/* Search Bar */}
+          <div className="mb-8 relative group max-w-md">
+            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors">🔍</span>
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Tìm theo email hoặc tên người dùng..."
+              className="w-full bg-white border border-slate-100 rounded-2xl py-4 pl-14 pr-6 text-sm font-medium outline-none focus:border-indigo-400 focus:shadow-[0_0_0_4px_rgba(99,102,241,0.05)] transition-all shadow-sm"
+            />
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center items-center py-40">
+              <div className="w-10 h-10 rounded-full border-4 border-slate-200 border-t-indigo-600 animate-spin"></div>
+            </div>
+          ) : (
+            <div className="bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-100 overflow-hidden transition-all">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/50 border-b border-slate-50">
+                    <th className="text-left px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Người dùng</th>
+                    <th className="text-left px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Vai trò (Roles)</th>
+                    <th className="text-left px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Trạng thái</th>
+                    <th className="text-right px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {filtered.map(user => (
+                    <React.Fragment key={user.email}>
+                      <tr className={`group transition-colors hover:bg-slate-50/30 ${!user.enable ? 'bg-rose-50/10' : ''}`}>
+                        <td className="px-8 py-6">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 font-bold group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
+                                {user.username?.charAt(0).toUpperCase() || 'U'}
+                            </div>
+                            <div>
+                                <p className="text-sm font-black text-slate-700 uppercase tracking-tight">{user.username}</p>
+                                <p className="text-xs font-bold text-slate-400 lowercase tracking-tight">{user.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-8 py-6">
+                          <div className="flex flex-wrap gap-1.5">
+                            {user.roles?.map(r => (
+                              <span
+                                key={r}
+                                className="text-[9px] font-black bg-indigo-50 text-indigo-500 border border-indigo-100 px-2 py-0.5 rounded-md uppercase tracking-tighter"
+                              >
+                                {r.replace('ROLE_', '')}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-8 py-6 text-center">
+                          <span className={`inline-block text-[10px] font-black px-3 py-1 rounded-lg uppercase tracking-widest border ${
+                            user.enable
+                              ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                              : 'bg-rose-50 text-rose-500 border-rose-100'
+                          }`}>
+                            {user.enable ? 'Active' : 'Locked'}
+                          </span>
+                        </td>
+                        <td className="px-8 py-6 text-right">
+                          <div className="flex items-center justify-end gap-3">
+                            <button
+                              onClick={() => setExpandedUser(expandedUser === user.email ? null : user.email)}
+                              className={`text-[11px] font-black px-5 py-2.5 rounded-xl transition-all border cursor-pointer uppercase tracking-widest shadow-sm ${
+                                expandedUser === user.email 
+                                ? 'bg-slate-800 text-white border-slate-800' 
+                                : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-400 hover:text-indigo-600'
+                              }`}
+                            >
+                              {expandedUser === user.email ? 'Đóng' : 'Sửa Roles'}
+                            </button>
+                            <button
+                              onClick={() => handleToggle(user.email)}
+                              disabled={processing === user.email + '_toggle'}
+                              className={`text-[11px] font-black px-5 py-2.5 rounded-xl transition-all border-0 cursor-pointer shadow-md uppercase tracking-widest active:scale-95 disabled:opacity-30 ${
+                                user.enable
+                                  ? 'bg-rose-500 hover:bg-rose-600 text-white shadow-rose-100'
+                                  : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-100'
+                              }`}
+                            >
+                              {processing === user.email + '_toggle' ? '...' : user.enable ? 'Khóa' : 'Mở khóa'}
+                            </button>
                           </div>
                         </td>
                       </tr>
-                    )}
-                  </>
-                ))}
-              </tbody>
-            </table>
 
-            {filtered.length === 0 && (
-              <div className="text-center py-12 text-gray-400 text-sm">
-                Không tìm thấy người dùng nào
-              </div>
-            )}
-          </div>
-        )}
+                      {/* Phân quyền Role Row */}
+                      {expandedUser === user.email && (
+                        <tr className="bg-slate-50/50">
+                          <td colSpan={4} className="px-8 py-8 animate-fadeIn">
+                            <div className="bg-white rounded-[1.5rem] p-6 border border-slate-100 shadow-inner">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="w-1 h-5 bg-indigo-500 rounded-full"></div>
+                                    <p className="text-[11px] font-black text-slate-800 uppercase tracking-widest">
+                                        Đặc quyền hệ thống: <span className="text-indigo-500">{user.email}</span>
+                                    </p>
+                                </div>
+                                <div className="flex flex-wrap gap-3">
+                                    {AVAILABLE_ROLES.map(role => {
+                                      const hasRole = user.roles?.includes(role)
+                                      const isProcessing = processing === user.email + '_' + role
+                                      return (
+                                        <button
+                                          key={role}
+                                          onClick={() => hasRole ? handleRemoveRole(user.email, role) : handleAssignRole(user.email, role)}
+                                          disabled={isProcessing}
+                                          className={`text-[11px] font-bold px-6 py-3 rounded-xl border-2 transition-all cursor-pointer uppercase tracking-widest active:scale-95 disabled:opacity-30 ${
+                                            hasRole
+                                              ? 'bg-indigo-600 text-white border-indigo-600 hover:bg-rose-500 hover:border-rose-500 shadow-lg shadow-indigo-100'
+                                              : 'bg-white text-slate-400 border-slate-100 hover:border-indigo-200 hover:text-indigo-500'
+                                          }`}
+                                        >
+                                          {isProcessing ? '...' : hasRole ? `✓ ${role.replace('ROLE_', '')}` : `+ ${role.replace('ROLE_', '')}`}
+                                        </button>
+                                      )
+                                    })}
+                                </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+
+              {filtered.length === 0 && (
+                <div className="text-center py-24 text-slate-300 font-bold italic border-t border-slate-50">
+                  <span className="text-4xl block mb-4 grayscale opacity-20">🔎</span>
+                  Không tìm thấy tài khoản nào phù hợp
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

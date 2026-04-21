@@ -5,9 +5,9 @@ import StatusBadge from '../../components/ui/StatusBadge'
 import orderService from '../../services/orderService'
 
 const STATUS_CONFIG = {
-  PENDING:          { next: 'CONFIRMED', nextLabel: 'Xác nhận đơn' },
-  CONFIRMED:        { next: 'SHIPPING',  nextLabel: 'Giao hàng ngay' },
-  SHIPPING:         { next: 'DELIVERED', nextLabel: 'Đã giao hàng' },
+  PENDING:          { next: 'CONFIRMED', nextLabel: 'Xác nhận đơn', color: 'from-amber-500 to-orange-600' },
+  CONFIRMED:        { next: 'SHIPPING',  nextLabel: 'Giao hàng ngay', color: 'from-blue-500 to-indigo-600' },
+  SHIPPING:         { next: 'DELIVERED', nextLabel: 'Đã giao hàng', color: 'from-emerald-500 to-teal-600' },
   DELIVERED:        { next: null },
   CANCELLED:        { next: null },
   RETURN_REQUESTED: { next: null },
@@ -62,65 +62,70 @@ export default function ShopOrders() {
 
   if (loading)
     return (
-      <div className="min-h-screen bg-gray-50 flex">
+      <div className="min-h-screen bg-[#f8fafc] flex">
         <ShopSidebar />
-        <div className="flex-1 flex justify-center py-20">
-          <div className="w-12 h-12 rounded-full border-4 border-gray-200 border-t-orange-500 animate-spin"></div>
+        <div className="flex-1 flex justify-center items-center">
+          <div className="w-10 h-10 rounded-full border-4 border-slate-200 border-t-indigo-600 animate-spin"></div>
         </div>
       </div>
     )
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-[#f8fafc] flex font-sans text-slate-900">
       <ShopSidebar />
       <div className="flex-1 overflow-auto">
-        <div className="max-w-7xl mx-auto px-8 py-8">
-          <h2 className="text-3xl font-extrabold text-gray-800 mb-8">Quản Lý Đơn Hàng</h2>
+        <div className="max-w-[1600px] mx-auto px-10 py-10">
+          
+          {/* Header */}
+          <div className="mb-10">
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[3px] mb-1">Quản trị vận hành</p>
+            <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">Quản Lý Đơn Hàng</h2>
+          </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-4 gap-6 mb-8">
+          {/* Stats - Đồng bộ Dashboard */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
             {[
-              { label: 'Tổng đơn hàng',   value: orders.length,                                                             color: 'bg-gray-800' },
-              { label: 'Cần xử lý',       value: orders.filter(o => ['PENDING','CONFIRMED'].includes(o.orderStatus)).length, color: 'bg-yellow-500' },
-              { label: 'Đang vận chuyển', value: orders.filter(o => o.orderStatus === 'SHIPPING').length,                   color: 'bg-orange-500' },
-              { label: 'Thành công',      value: orders.filter(o => o.orderStatus === 'DELIVERED').length,                  color: 'bg-green-500' },
+              { label: 'Tổng đơn hàng',   value: orders.length, color: 'from-slate-700 to-slate-800', shadow: 'shadow-slate-200' },
+              { label: 'Cần xử lý',       value: orders.filter(o => ['PENDING','CONFIRMED'].includes(o.orderStatus)).length, color: 'from-amber-400 to-orange-500', shadow: 'shadow-orange-200' },
+              { label: 'Đang vận chuyển', value: orders.filter(o => o.orderStatus === 'SHIPPING').length, color: 'from-indigo-500 to-blue-600', shadow: 'shadow-indigo-200' },
+              { label: 'Thành công',       value: orders.filter(o => o.orderStatus === 'DELIVERED').length, color: 'from-emerald-500 to-teal-600', shadow: 'shadow-emerald-200' },
             ].map((s, i) => (
-              <div key={i} className={`${s.color} text-white rounded-2xl p-6 shadow-md`}>
-                <p className="text-4xl font-black">{s.value}</p>
-                <p className="text-base font-medium opacity-90 mt-1">{s.label}</p>
+              <div key={i} className={`bg-gradient-to-br ${s.color} ${s.shadow} text-white rounded-2xl p-6 shadow-xl`}>
+                <p className="text-3xl font-black tracking-tighter">{s.value}</p>
+                <p className="text-[11px] font-bold uppercase tracking-wider opacity-80 mt-1">{s.label}</p>
               </div>
             ))}
           </div>
 
-          {/* Tabs */}
-          <div className="bg-white rounded-2xl shadow-sm mb-6 flex p-1 border border-gray-100 overflow-x-auto">
+          {/* Tabs - Modern Minimal */}
+          <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] mb-8 flex p-1.5 border border-slate-100 overflow-x-auto">
             {TABS.map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`flex-1 flex-shrink-0 px-4 py-3 text-sm font-bold rounded-xl transition cursor-pointer border-0 ${
+                className={`flex-1 flex-shrink-0 px-6 py-3 text-xs font-extrabold rounded-xl transition-all duration-300 border-0 cursor-pointer uppercase tracking-wider ${
                   activeTab === tab
-                    ? 'bg-orange-500 text-white shadow-md'
-                    : 'bg-transparent text-gray-500 hover:text-orange-500'
+                    ? 'bg-slate-900 text-white shadow-lg'
+                    : 'bg-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50'
                 }`}
               >
                 {tab}
-                <span className={`ml-1.5 text-xs ${activeTab === tab ? 'text-orange-100' : 'text-gray-400'}`}>
-                  ({tab === 'Tất cả'
+                <span className={`ml-2 px-2 py-0.5 rounded-md text-[10px] ${activeTab === tab ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                  {tab === 'Tất cả'
                     ? orders.length
-                    : orders.filter(o => TAB_STATUS[tab]?.includes(o.orderStatus)).length})
+                    : orders.filter(o => TAB_STATUS[tab]?.includes(o.orderStatus)).length}
                 </span>
               </button>
             ))}
           </div>
 
           {filtered.length === 0 ? (
-            <div className="bg-white rounded-3xl shadow-sm p-20 text-center border border-gray-100">
-              <p className="text-6xl mb-4">📋</p>
-              <p className="text-gray-400 text-lg font-medium">Không tìm thấy đơn hàng nào</p>
+            <div className="bg-white rounded-[2rem] shadow-sm p-24 text-center border border-slate-100">
+              <div className="text-5xl mb-6 grayscale opacity-50">📦</div>
+              <p className="text-slate-400 text-lg font-bold italic">Không tìm thấy đơn hàng nào trong mục này</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {filtered.map(order => {
                 const statusCfg = STATUS_CONFIG[order.orderStatus] || {}
                 const isExpanded = expandedOrder === order.orderCode
@@ -129,19 +134,19 @@ export default function ShopOrders() {
                 return (
                   <div
                     key={order.orderCode}
-                    className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100 hover:shadow-md transition-shadow"
+                    className="bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.03)] overflow-hidden border border-slate-100 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] transition-all duration-300"
                   >
                     {/* Header */}
-                    <div className="px-6 py-5 border-b border-gray-50 flex items-center justify-between">
-                      <div className="flex items-center gap-6">
+                    <div className="px-8 py-6 border-b border-slate-50 flex items-center justify-between bg-white">
+                      <div className="flex items-center gap-8">
                         <div>
-                          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Mã vận đơn</p>
-                          <p className="text-base font-black text-gray-800">{order.orderCode}</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Mã vận đơn</p>
+                          <p className="text-base font-black text-slate-800 tracking-tight">#{order.orderCode}</p>
                         </div>
-                        <div className="h-10 w-px bg-gray-100"></div>
+                        <div className="h-8 w-px bg-slate-100"></div>
                         <div>
-                          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Ngày đặt</p>
-                          <p className="text-sm font-bold text-gray-600">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Thời gian đặt</p>
+                          <p className="text-sm font-bold text-slate-600">
                             {new Date(order.createdAt).toLocaleDateString('vi-VN', {
                               day: '2-digit', month: '2-digit', year: 'numeric',
                               hour: '2-digit', minute: '2-digit',
@@ -152,84 +157,89 @@ export default function ShopOrders() {
                       <StatusBadge status={order.orderStatus} type="order" />
                     </div>
 
-                    {/* Items */}
-                    <div className="px-6 py-5">
+                    {/* Items List */}
+                    <div className="px-8 py-6 space-y-5">
                       {order.items
                         .slice(0, isExpanded ? order.items.length : 2)
                         .map((item, idx) => (
-                          <div key={idx} className="flex items-center gap-4 mb-4 last:mb-0">
-                            <div className="w-14 h-14 bg-gray-50 rounded-xl flex items-center justify-center text-gray-300 shrink-0 border border-gray-100 text-2xl">
+                          <div key={idx} className="flex items-center gap-5 group">
+                            <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 shrink-0 border border-slate-100 text-xl group-hover:bg-indigo-50 group-hover:text-indigo-400 transition-colors">
                               📦
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-base font-bold text-gray-700 truncate">{item.productName}</p>
-                              <p className="text-sm font-bold text-gray-400">
-                                Số lượng: <span className="text-gray-600">{item.quantity}</span>
+                              <p className="text-sm font-black text-slate-700 truncate uppercase tracking-tight">{item.productName}</p>
+                              <p className="text-xs font-bold text-slate-400 mt-1">
+                                Số lượng: <span className="text-slate-600 font-extrabold">{item.quantity}</span>
                               </p>
                             </div>
-                            <p className="text-lg font-black text-gray-800 shrink-0">
+                            <p className="text-lg font-black text-slate-800">
                               {Number(item.subTotal).toLocaleString('vi-VN')}₫
                             </p>
                           </div>
                         ))}
+                      
                       {order.items.length > 2 && (
                         <button
                           onClick={() => setExpandedOrder(isExpanded ? null : order.orderCode)}
-                          className="text-sm font-bold text-orange-500 mt-2 cursor-pointer bg-transparent border-0 p-0 hover:underline"
+                          className="text-xs font-bold text-indigo-500 mt-2 cursor-pointer bg-slate-50 px-4 py-2 rounded-lg border-0 hover:bg-indigo-50 transition-colors"
                         >
                           {isExpanded ? '▲ Thu gọn' : `▼ Xem thêm ${order.items.length - 2} sản phẩm`}
                         </button>
                       )}
                     </div>
 
-                    {/* Shipping info (expanded) */}
+                    {/* Shipping Info - Styled as "Bento" */}
                     {isExpanded && (
-                      <div className="px-6 py-5 bg-orange-50 border-t border-orange-100 flex gap-8">
+                      <div className="px-8 py-6 bg-slate-50/50 border-t border-slate-50 flex flex-col md:flex-row gap-8 animate-fadeIn">
                         <div className="flex-1">
-                          <p className="text-xs font-black text-orange-400 uppercase tracking-widest mb-2">
-                            📍 Thông tin nhận hàng
+                          <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-[2px] mb-3 flex items-center gap-2">
+                             <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full"></span> Địa chỉ nhận hàng
                           </p>
-                          <p className="text-base font-black text-gray-800">
-                            {order.shippingFullName} — {order.shippingPhone}
-                          </p>
-                          <p className="text-base text-gray-600 mt-1 font-medium">
-                            {order.shippingStreetAddress}, {order.shippingDistrict}, {order.shippingProvince}
-                          </p>
+                          <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                            <p className="text-sm font-black text-slate-800">
+                              {order.shippingFullName} — {order.shippingPhone}
+                            </p>
+                            <p className="text-sm text-slate-500 mt-2 leading-relaxed font-medium">
+                              {order.shippingStreetAddress}, {order.shippingDistrict}, {order.shippingProvince}
+                            </p>
+                          </div>
                         </div>
                         {order.note && (
-                          <div className="flex-1 border-l border-orange-200 pl-8">
-                            <p className="text-xs font-black text-orange-400 uppercase tracking-widest mb-2">
-                              💬 Ghi chú
+                          <div className="flex-1">
+                            <p className="text-[10px] font-bold text-orange-400 uppercase tracking-[2px] mb-3 flex items-center gap-2">
+                               <span className="w-1.5 h-1.5 bg-orange-400 rounded-full"></span> Ghi chú đơn hàng
                             </p>
-                            <p className="text-base italic text-gray-600">"{order.note}"</p>
+                            <div className="bg-orange-50/50 p-5 rounded-2xl border border-orange-100 border-dashed">
+                                <p className="text-sm italic text-slate-600 font-medium">"{order.note}"</p>
+                            </div>
                           </div>
                         )}
                       </div>
                     )}
 
-                    {/* Footer */}
-                    <div className="px-6 py-4 bg-gray-50 flex items-center justify-between border-t border-gray-100">
-                      <p className="text-lg font-bold text-gray-700">
-                        Tổng:{' '}
-                        <span className="text-2xl font-black text-orange-500 ml-2">
+                    {/* Footer Actions */}
+                    <div className="px-8 py-5 bg-white flex flex-col sm:flex-row items-center justify-between border-t border-slate-50 gap-4">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-xs font-bold text-slate-400 uppercase">Tổng thanh toán:</span>
+                        <span className="text-2xl font-black text-indigo-600 tracking-tighter">
                           {Number(order.totalPrice).toLocaleString('vi-VN')}₫
                         </span>
-                      </p>
-                      <div className="flex gap-3">
+                      </div>
+
+                      <div className="flex gap-3 w-full sm:w-auto">
                         <button
                           onClick={() => setExpandedOrder(isExpanded ? null : order.orderCode)}
-                          className="text-sm font-bold border-2 border-gray-200 text-gray-500 px-5 py-2.5 rounded-xl hover:bg-gray-100 transition cursor-pointer bg-white"
+                          className="flex-1 sm:flex-none text-xs font-bold border border-slate-200 text-slate-500 px-6 py-3 rounded-xl hover:bg-slate-50 transition-all cursor-pointer bg-white"
                         >
                           {isExpanded ? 'Đóng' : 'Chi tiết'}
                         </button>
 
-                        {/* Có return request → link sang ShopReturns */}
                         {hasReturn && (
                           <button
                             onClick={() => navigate('/shop/returns')}
-                            className="text-sm font-bold border-2 border-purple-400 text-purple-500 px-5 py-2.5 rounded-xl hover:bg-purple-50 transition cursor-pointer bg-white"
+                            className="flex-1 sm:flex-none text-xs font-bold border border-purple-200 text-purple-600 px-6 py-3 rounded-xl hover:bg-purple-50 transition-all cursor-pointer bg-white"
                           >
-                            ↩️ Xem trả hàng
+                            ↩️ Trả hàng
                           </button>
                         )}
 
@@ -237,7 +247,7 @@ export default function ShopOrders() {
                           <button
                             onClick={() => handleUpdateStatus(order.orderCode, statusCfg.next)}
                             disabled={updating === order.orderCode}
-                            className="text-sm font-bold bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-xl transition shadow-lg shadow-orange-100 cursor-pointer border-0 disabled:opacity-50"
+                            className={`flex-1 sm:flex-none text-xs font-bold bg-gradient-to-r ${statusCfg.color} text-white px-8 py-3 rounded-xl transition-all shadow-lg hover:scale-[1.02] active:scale-[0.98] cursor-pointer border-0 disabled:opacity-50 disabled:cursor-not-allowed`}
                           >
                             {updating === order.orderCode ? 'Đang xử lý...' : statusCfg.nextLabel}
                           </button>
