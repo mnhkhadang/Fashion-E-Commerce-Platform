@@ -24,6 +24,8 @@ public class ProductResponse {
     private String categoryName;
     private List<MediaResponse> mediaList;
 
+    private Long saleId;       // ← thêm
+    private String saleName;   // ← thêm
     private BigDecimal salePrice;
     private Integer discountPercent;
     private String saleSource;

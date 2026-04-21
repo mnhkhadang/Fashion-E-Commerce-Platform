@@ -1,41 +1,51 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { NAV_ITEMS } from './shopNav'
+import { Link, useLocation } from 'react-router-dom'
 
 export default function ShopSidebar() {
-    const location = useLocation()
-    const navigate = useNavigate()
+  const location = useLocation()
+  
+  const menuItems = [
+    { name: 'Tổng quan', path: '/shop', icon: '📊' },
+    { name: 'Sản phẩm', path: '/shop/products', icon: '📦' },
+    { name: 'Đơn hàng', path: '/shop/orders', icon: '🛒' },
+    { name: 'Khuyến mãi & Sales', path: '/shop/sales', icon: '💰' }, // Cập nhật
+    { name: 'Đổi trả', path: '/shop/returns', icon: '🔄' },
+    { name: 'Thông tin shop', path: '/shop/profile', icon: '🏪' },
+  ]
 
-    return (
-        <aside className='w-100 shrink-0 bg-white shadow-sm min-h-screen flex flex-col py-6 px-3'>
-            <div className='flex items-center gap-2 px-3 mb-8'>
-                <span className='text-sm'>🏪</span>
-                <span className='font-bold text-gray-800 text-lg'>Shop Manager</span>
-            </div>
-            <p className='text-[11px] text-gray-400 uppercase tracking-widest px-3 mb-2'>Main Menu</p>
-            <nav className='flex flex-col gap-1'>
-                {NAV_ITEMS.map(item => (
-                    <Link
-                        key={item.label}
-                        to={item.link}
-                        className={`flex items-center gap-3 px-3 py-5 rounded-lg text-base font-medium transition no-underline ${
-                            location.pathname === item.link
-                                ? 'bg-orange-50 text-orange-500'
-                                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
-                        }`}
-                    >
-                        <span className='text-base'>{item.icon}</span>
-                        {item.label}
-                    </Link>
-                ))}
-            </nav>
-            <div className='mt-auto'>
-                <button
-                    onClick={() => navigate('/')}
-                    className='flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 w-full cursor-pointer bg-transparent border-0'
-                >
-                    <span>🚪</span> Về trang chủ
-                </button>
-            </div>
-        </aside>
-    )
+  return (
+    <div className="w-[260px] bg-white border-r border-slate-100 min-h-screen p-6 flex flex-col shrink-0">
+      <div className="flex items-center gap-3 mb-10 px-2">
+        <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-xl">🏪</div>
+        <div>
+          <h1 className="text-slate-900 font-black text-sm tracking-tight uppercase">Shop Manager</h1>
+        </div>
+      </div>
+
+      <nav className="flex-1 space-y-2">
+        {menuItems.map(item => {
+          const isActive = location.pathname === item.path
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`flex items-center gap-4 px-5 py-3.5 rounded-xl text-[13px] font-bold transition-all no-underline ${
+                isActive 
+                  ? 'bg-indigo-50 text-indigo-600' 
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+              }`}
+            >
+              <span className="text-lg">{item.icon}</span>
+              {item.name}
+            </Link>
+          )
+        })}
+      </nav>
+      
+      <div className="mt-auto pt-6 border-t border-slate-50">
+        <Link to="/" className="flex items-center gap-4 px-5 py-3 text-slate-400 hover:text-slate-700 text-xs font-bold no-underline transition">
+           🏠 Trang chủ
+        </Link>
+      </div>
+    </div>
+  )
 }

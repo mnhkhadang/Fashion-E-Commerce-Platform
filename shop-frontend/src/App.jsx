@@ -27,6 +27,8 @@ import ShopOrders from './pages/shop/ShopOrders'
 import ShopProducts from './pages/shop/ShopProducts'
 import ShopProfile from './pages/shop/ShopProfile'
 import ShopReturns from './pages/shop/ShopReturns'
+import ShopSales from './pages/shop/ShopSales'
+
 
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminUsers from './pages/admin/AdminUsers'
@@ -35,7 +37,7 @@ import AdminRegistrations from './pages/admin/AdminRegistrations'
 import AdminUnlockRequests from './pages/admin/AdminUnlockRequests'
 import AdminReports from './pages/admin/AdminReports'
 import AdminCategories from './pages/admin/AdminCategories'
-
+import AdminSales from './pages/admin/AdminSales'
 // FIX: dùng AiChatWidget — floating button, không cần route riêng
 import AiChatWidget from './components/AiChatWidget'
 
@@ -177,6 +179,7 @@ export default function App() {
         <Route path="/shop/returns" element={
           <ProtectedRoute roles={['ROLE_SHOP']}><ShopReturns /></ProtectedRoute>
         } />
+        <Route path="/shop/sales" element={<ProtectedRoute roles={['ROLE_SHOP']}><ShopSales /></ProtectedRoute>} />
 
         {/* Admin */}
         <Route path="/admin" element={
@@ -200,6 +203,7 @@ export default function App() {
         <Route path="/admin/categories" element={
           <ProtectedRoute roles={['ROLE_ADMIN']}><AdminCategories /></ProtectedRoute>
         } />
+        <Route path="/admin/sales" element={<ProtectedRoute roles={['ROLE_ADMIN']}><AdminSales /></ProtectedRoute>} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
